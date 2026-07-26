@@ -13,6 +13,7 @@ __pycache__/
 
 .venv/
 venv/
+.vercel/
 
 data/chrome_profile/
 data/qconcursos_profile/
@@ -30,3 +31,9 @@ frontend_flutter/build/
 !.env.example
 *.key
 client_secret_*.json
+
+# Local artifacts and heavy binaries
+Cortex Extensão/backend-legacy/data/
+Cortex Extensão/extension.zip
+layout/guidelines1.zip
+layout/Captura de tela *.png
