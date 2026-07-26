@@ -16,6 +16,11 @@ describe('PlanningService', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-26T10:00:00Z'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('gera cronograma adaptativo com base em desempenho e atualiza perfil', async () => {
@@ -99,9 +104,16 @@ describe('PlanningService', () => {
 
     expect(result.summary.mode).toBe('adaptativo');
     expect(result.summary.totalAttempts).toBe(3);
+    expect(result.summary.dailyMinutes).toBe(144);
+    expect(result.summary.weeklyMinutes).toBe(1008);
+    expect(result.summary.blockMinutes).toBe(40);
     expect(result.profile.peakEnergyTime).toBe('NOITE');
     expect(result.schedule.length).toBeGreaterThan(0);
     expect(result.schedule[0].startsAt).toBe('19:00');
+    expect(
+      result.schedule.every((task: any) => task.status === 'pending'),
+    ).toBe(true);
+    expect(result.insights[0].reason.length).toBeGreaterThan(0);
     expect(result.insights[0].subject).toBe('Direito Constitucional');
   });
 
@@ -115,7 +127,10 @@ describe('PlanningService', () => {
     });
     database.questionAttempt.findMany.mockResolvedValue([]);
     database.questionSubject.findMany.mockResolvedValue([
-      { name: 'Direito Administrativo', topics: [{ name: 'Atos Administrativos' }] },
+      {
+        name: 'Direito Administrativo',
+        topics: [{ name: 'Atos Administrativos' }],
+      },
       { name: 'Português', topics: [{ name: 'Interpretação de Texto' }] },
       { name: 'Informática', topics: [{ name: 'Segurança da Informação' }] },
       { name: 'Raciocínio Lógico', topics: [{ name: 'Argumentação' }] },
@@ -127,8 +142,13 @@ describe('PlanningService', () => {
     expect(database.user.update).not.toHaveBeenCalled();
     expect(result.summary.mode).toBe('inicial');
     expect(result.profile.dailyStudyHours).toBe(2);
+    expect(result.summary.dailyMinutes).toBe(108);
+    expect(result.summary.blockMinutes).toBe(30);
     expect(result.schedule.length).toBeGreaterThan(0);
-    expect(result.schedule.some((task: any) => task.type === 'reading')).toBe(true);
+    expect(result.schedule.some((task: any) => task.type === 'reading')).toBe(
+      true,
+    );
+    expect(result.schedule[0].startsAt).toBe('06:30');
     expect(result.insights).toHaveLength(4);
   });
 });

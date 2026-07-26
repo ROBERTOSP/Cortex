@@ -8,11 +8,26 @@ export class DatabaseService extends PrismaClient implements OnModuleInit, OnMod
   constructor() {
     const isProduction = process.env.NODE_ENV === 'production';
     
-    const pool = new Pool({ 
-      connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false // Permite certificados self-signed (comum no Supabase/Pooler)
+    const databaseUrl = process.env.DATABASE_URL || '';
+    const shouldUseSsl = (urlString: string) => {
+      try {
+        const url = new URL(urlString);
+        const host = (url.hostname || '').toLowerCase();
+        const sslmode = (url.searchParams.get('sslmode') || '').toLowerCase();
+
+        if (host === 'localhost' || host === '127.0.0.1') return false;
+        if (sslmode === 'disable') return false;
+        if (sslmode === 'require' || sslmode === 'verify-ca' || sslmode === 'verify-full') return true;
+
+        return true;
+      } catch {
+        return isProduction;
       }
+    };
+
+    const pool = new Pool({ 
+      connectionString: databaseUrl,
+      ssl: shouldUseSsl(databaseUrl) ? { rejectUnauthorized: false } : undefined
     });
     
     const adapter = new PrismaPg(pool);

@@ -6,6 +6,11 @@ const root = process.cwd();
 const requiredKeysByName = {
   "Backend env": ["DATABASE_URL", "JWT_SECRET"],
   "Web env": ["VITE_API_URL", "VITE_GOOGLE_CLIENT_ID"],
+  "Extension env": [
+    "VITE_API_URL",
+    "VITE_SUPABASE_URL",
+    "VITE_SUPABASE_ANON_KEY",
+  ],
 };
 
 const steps = [
@@ -18,6 +23,11 @@ const steps = [
     name: "Web env",
     from: join(root, "layout", ".env.example"),
     to: join(root, "layout", ".env.local"),
+  },
+  {
+    name: "Extension env",
+    from: join(root, "Cortex Extensão", "extension", ".env.example"),
+    to: join(root, "Cortex Extensão", "extension", ".env"),
   },
 ];
 
@@ -76,5 +86,9 @@ for (const step of steps) {
 
 process.stdout.write("\nPróximos comandos:\n");
 process.stdout.write("- npm install\n");
+process.stdout.write("- npm -w @cortex/backend run prisma:generate\n");
+process.stdout.write("- npm -w @cortex/backend run prisma:migrate:deploy\n");
+process.stdout.write("- npm -w @cortex/backend run prisma:seed\n");
 process.stdout.write("- npm run dev:backend\n");
 process.stdout.write("- npm run dev:web\n");
+process.stdout.write("- npm run dev:extension\n");
