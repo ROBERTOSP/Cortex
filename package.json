@@ -1,0 +1,20 @@
+{
+  "name": "cortex-monorepo",
+  "private": true,
+  "workspaces": [
+    "Cortex Extensão/backend",
+    "Cortex Extensão/extension",
+    "Cortex Scraper/backend",
+    "Cortex Scraper/extension",
+    "layout"
+  ],
+  "scripts": {
+    "setup:local": "node tools/setup-local.mjs",
+    "dev:web": "npm -w @cortex/web run dev",
+    "dev:backend": "npm -w @cortex/backend run start:dev",
+    "dev:extension": "npm -w @cortex/extension run dev",
+    "build": "npm -ws run build",
+    "lint": "npm -ws run lint --if-present",
+    "test": "npm -ws run test --if-present"
+  }
+}

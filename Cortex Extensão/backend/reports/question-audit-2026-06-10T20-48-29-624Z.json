@@ -1,0 +1,121 @@
+{
+  "meta": {
+    "startedAt": "2026-06-10T20:48:29.624Z",
+    "endedAt": "2026-06-10T20:48:31.015Z",
+    "durationSeconds": 1,
+    "args": {
+      "dir": "E:\\Cortex\\Cortex Scraper\\crawler\\exports",
+      "include": "_unique_\\d+\\.json$",
+      "maxFiles": 1,
+      "maxQuestions": 20000,
+      "outDir": "E:\\Cortex\\Cortex Extensão\\backend\\reports"
+    },
+    "filesScanned": [
+      "gran_2010_2026_unique_0001.json"
+    ]
+  },
+  "totals": {
+    "processed": 20000,
+    "valid": 19996,
+    "invalid": 4,
+    "globalUniqueCortexIdNum": 20000,
+    "duplicateAcrossDatasetsByCortexIdNum": 0
+  },
+  "datasets": {
+    "gran_2010_2026": {
+      "files": 1,
+      "rows": 50000,
+      "valid": 19996,
+      "invalid": 4,
+      "uniqueIdNum": 20000,
+      "duplicateIdNum": 0,
+      "issues": {
+        "option_missing_text": {
+          "count": 2,
+          "samples": [
+            {
+              "file": "gran_2010_2026_unique_0001.json",
+              "index": 1721,
+              "cortexId": "C563722",
+              "cortexIdNum": 563722,
+              "message": "Alternativa sem texto"
+            },
+            {
+              "file": "gran_2010_2026_unique_0001.json",
+              "index": 19435,
+              "cortexId": "C581436",
+              "cortexIdNum": 581436,
+              "message": "Alternativa sem texto"
+            }
+          ]
+        },
+        "statement_too_short": {
+          "count": 4,
+          "samples": [
+            {
+              "file": "gran_2010_2026_unique_0001.json",
+              "index": 3975,
+              "cortexId": "C565976",
+              "cortexIdNum": 565976,
+              "message": "Enunciado muito curto"
+            },
+            {
+              "file": "gran_2010_2026_unique_0001.json",
+              "index": 4205,
+              "cortexId": "C566206",
+              "cortexIdNum": 566206,
+              "message": "Enunciado muito curto"
+            },
+            {
+              "file": "gran_2010_2026_unique_0001.json",
+              "index": 4511,
+              "cortexId": "C566512",
+              "cortexIdNum": 566512,
+              "message": "Enunciado muito curto"
+            },
+            {
+              "file": "gran_2010_2026_unique_0001.json",
+              "index": 17905,
+              "cortexId": "C579906",
+              "cortexIdNum": 579906,
+              "message": "Enunciado muito curto"
+            }
+          ]
+        },
+        "missing_statement": {
+          "count": 4,
+          "samples": [
+            {
+              "file": "gran_2010_2026_unique_0001.json",
+              "index": 4201,
+              "cortexId": "C566202",
+              "cortexIdNum": 566202,
+              "message": "Questao C566202 sem enunciado"
+            },
+            {
+              "file": "gran_2010_2026_unique_0001.json",
+              "index": 4389,
+              "cortexId": "C566390",
+              "cortexIdNum": 566390,
+              "message": "Questao C566390 sem enunciado"
+            },
+            {
+              "file": "gran_2010_2026_unique_0001.json",
+              "index": 4390,
+              "cortexId": "C566391",
+              "cortexIdNum": 566391,
+              "message": "Questao C566391 sem enunciado"
+            },
+            {
+              "file": "gran_2010_2026_unique_0001.json",
+              "index": 4536,
+              "cortexId": "C566537",
+              "cortexIdNum": 566537,
+              "message": "Questao C566537 sem enunciado"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

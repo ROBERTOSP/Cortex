@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  name            String?
+  avatarUrl       String?
+  googleId        String?  @unique
+  tokens          Int      @default(100)
+  
+  // Perfil Cognitivo / Rotina
+  studyLevel      String?  // Ativo, Inativo
+  dailyStudyHours Int?
+  fatigueLevel    String?  // Baixo, Médio, Alto
+  peakEnergyTime  String?  // Manhã, Tarde, Noite
+  works           Boolean  @default(false)
+  
+  contests        Contest[]
+  studySessions   StudySession[]
+  questionAttempts QuestionAttempt[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Contest {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  name        String   // Ex: PCDF
+  targetJob   String   // Ex: Agente
+  board       String   // Ex: Cebraspe
+  examDate    DateTime?
+  status      String   @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
+  
+  nodes       KnowledgeNode[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("contests")
+}
+
+model KnowledgeNode {
+  id          String   @id @default(uuid())
+  contestId   String
+  contest     Contest  @relation(fields: [contestId], references: [id])
+  
+  parentId    String?
+  parent      KnowledgeNode?  @relation("NodeHierarchy", fields: [parentId], references: [id])
+  children    KnowledgeNode[] @relation("NodeHierarchy")
+  
+  name        String   // Ex: Direito Constitucional, Crase
+  type        String   // SUBJECT, TOPIC, SUBTOPIC, CONCEPT
+  
+  // Métricas Cortex™
+  mastery     Float    @default(0) // 0-100
+  retention   Float    @default(0) // 0-100
+  difficulty  Float    @default(0) // 0-100 (Percebida pelo usuário)
+  
+  notes       Note[]
+  flashcards  Flashcard[]
+  questions   Question[] @relation("KnowledgeNodeQuestions")
+  revisions   Revision[]
+  studySessions StudySession[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("knowledge_nodes")
+}
+
+model Note {
+  id          String   @id @default(uuid())
+  nodeId      String
+  node        KnowledgeNode @relation(fields: [nodeId], references: [id])
+  
+  content     String   @db.Text // Conteúdo Notion-style (JSON ou Markdown)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("notes")
+}
+
+model Flashcard {
+  id          String   @id @default(uuid())
+  nodeId      String
+  node        KnowledgeNode @relation(fields: [nodeId], references: [id])
+  
+  front       String
+  back        String
+  difficulty  Float    @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("flashcards")
+}
+
+model Question {
+  id                    String            @id @default(uuid())
+  knowledgeNodeId       String?           @map("nodeId")
+  knowledgeNode         KnowledgeNode?    @relation("KnowledgeNodeQuestions", fields: [knowledgeNodeId], references: [id])
+
+  cortexIdNum           Int               @unique @map("cortex_id_num")
+  cortexId              String            @unique @map("cortex_id")
+  statement             String            @db.Text
+  associatedText        String?           @db.Text @map("associated_text")
+  officialAnswer        String?           @map("official_answer")
+  difficulty            String?
+  difficultyNum         Int?              @map("difficulty_num")
+  type                  String?
+  annulled              Boolean           @default(false)
+  outdated              Boolean           @default(false)
+  year                  Int?
+  exam                  String?
+  contentText           String            @db.Text @map("content_text")
+  contentHash           String            @unique @map("content_hash")
+  rawJson               Json?             @map("raw_json")
+  statementImages       String[]          @default([]) @map("statement_images")
+  itemImages            String[]          @default([]) @map("item_images")
+  associatedTextImages  String[]          @default([]) @map("associated_text_images")
+  importBatch           String?           @map("import_batch")
+
+  boardId               String?           @map("board_id")
+  board                 QuestionBoard?    @relation(fields: [boardId], references: [id])
+  subjectId             String?           @map("subject_id")
+  subject               QuestionSubject?  @relation(fields: [subjectId], references: [id])
+  topicId               String?           @map("topic_id")
+  topic                 QuestionTopic?    @relation(fields: [topicId], references: [id])
+  subtopicId            String?           @map("subtopic_id")
+  subtopic              QuestionSubtopic? @relation(fields: [subtopicId], references: [id])
+
+  options               QuestionOption[]
+  attempts              QuestionAttempt[]
+
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@index([year])
+  @@index([boardId])
+  @@index([subjectId])
+  @@index([topicId])
+  @@index([subtopicId])
+  @@map("questions")
+}
+
+model QuestionOption {
+  id           String   @id @default(uuid())
+  questionId   String   @map("question_id")
+  question     Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  letter       String
+  text         String   @db.Text
+  isCorrect    Boolean  @default(false) @map("is_correct")
+  displayOrder Int      @default(0) @map("display_order")
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([questionId, letter])
+  @@index([questionId, displayOrder])
+  @@map("question_options")
+}
+
+model QuestionBoard {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  questions Question[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("question_boards")
+}
+
+model QuestionSubject {
+  id        String          @id @default(uuid())
+  name      String          @unique
+  questions Question[]
+  topics    QuestionTopic[]
+
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@map("question_subjects")
+}
+
+model QuestionTopic {
+  id         String             @id @default(uuid())
+  name       String
+  subjectId  String?            @map("subject_id")
+  subject    QuestionSubject?   @relation(fields: [subjectId], references: [id])
+  questions  Question[]
+  subtopics  QuestionSubtopic[]
+
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@unique([name, subjectId])
+  @@index([subjectId])
+  @@map("question_topics")
+}
+
+model QuestionSubtopic {
+  id         String          @id @default(uuid())
+  name       String
+  topicId    String?         @map("topic_id")
+  topic      QuestionTopic?  @relation(fields: [topicId], references: [id])
+  questions  Question[]
+
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@unique([name, topicId])
+  @@index([topicId])
+  @@map("question_subtopics")
+}
+
+model QuestionAttempt {
+  id                String   @id @default(uuid())
+
+  userId            String   @map("user_id")
+  user              User     @relation(fields: [userId], references: [id])
+
+  questionId        String   @map("question_id")
+  question          Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  selectedOption    String   @map("selected_option")
+  correctOption     String   @map("correct_option")
+  isCorrect         Boolean  @map("is_correct")
+
+  latencyMs         Int?     @map("latency_ms")
+  switchesCount     Int?     @map("switches_count")
+  hesitationDetected Boolean? @map("hesitation_detected")
+
+  explanation       String?  @db.Text @map("explanation")
+  explainedAt       DateTime? @map("explained_at")
+
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([questionId])
+  @@map("question_attempts")
+}
+
+model StudySession {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  nodeId      String
+  node        KnowledgeNode @relation(fields: [nodeId], references: [id])
+  
+  startTime   DateTime @default(now())
+  endTime     DateTime?
+  duration    Int?     // Segundos
+  focusScore  Float?   // 0-100
+  fatigueLevel String?
+  
+  createdAt   DateTime @default(now())
+
+  @@map("study_sessions")
+}
+
+model Revision {
+  id          String   @id @default(uuid())
+  nodeId      String
+  node        KnowledgeNode @relation(fields: [nodeId], references: [id])
+  
+  scheduledFor DateTime
+  completedAt  DateTime?
+  score        Float?    // Desempenho na revisão
+  
+  createdAt    DateTime @default(now())
+
+  @@map("revisions")
+}

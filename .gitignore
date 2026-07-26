@@ -1,0 +1,32 @@
+node_modules/
+dist/
+build/
+.turbo/
+.next/
+.output/
+.vite/
+.cache/
+.tmp*
+
+__pycache__/
+*.pyc
+
+.venv/
+venv/
+
+data/chrome_profile/
+data/qconcursos_profile/
+stake_bot/chrome_profile/
+Cortex Scraper/crawler/data/chrome_profile/
+Cortex Scraper/crawler/data/chrome_profile_v1/
+
+Cortex Scraper/crawler/exports/tmp_test/
+
+frontend_flutter/.idea/
+frontend_flutter/build/
+
+.env
+.env.*
+!.env.example
+*.key
+client_secret_*.json

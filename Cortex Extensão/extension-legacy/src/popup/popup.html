@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>Cortex</title>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="title">Cortex</div>
+      <div class="row">
+        <label class="switch">
+          <input id="enabled" type="checkbox" />
+          <span>Ativo</span>
+        </label>
+      </div>
+
+      <div class="field">
+        <div class="label">API Base URL</div>
+        <input id="apiBaseUrl" type="text" placeholder="http://localhost:8000" />
+      </div>
+
+      <div class="field">
+        <div class="label">Token (opcional)</div>
+        <input id="apiToken" type="password" placeholder="Bearer token" />
+      </div>
+
+      <div class="actions">
+        <button id="openLogin" class="secondary">Login</button>
+      </div>
+
+      <div class="actions">
+        <button id="save">Salvar</button>
+        <button id="flush" class="secondary">Enviar pendências</button>
+      </div>
+
+      <div id="status" class="status"></div>
+    </div>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

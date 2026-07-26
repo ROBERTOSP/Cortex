@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="auth.css" />
+    <title>Login - Cortex</title>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="title">Login</div>
+      <div class="subtitle">Entre com Google para sincronizar tokens e assinatura.</div>
+
+      <div class="card">
+        <div class="row">
+          <div class="label">Status</div>
+          <div id="status" class="value">Carregando...</div>
+        </div>
+        <div class="row">
+          <div class="label">Conta</div>
+          <div id="account" class="value">—</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btnLogin">Entrar com Google</button>
+        <button id="btnLogout" class="secondary">Sair</button>
+      </div>
+
+      <div class="hint">
+        Se o login falhar, verifique o client_id OAuth2 no manifest e a URL da API em Config.
+      </div>
+    </div>
+
+    <script type="module" src="auth.js"></script>
+  </body>
+</html>

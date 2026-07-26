@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Cortex (Extension-First)",
+  "version": "0.1.0",
+  "description": "Captura telemetria de estudo em portais de questões e envia para a API do Cortex.",
+  "permissions": ["storage", "identity"],
+  "oauth2": {
+    "client_id": "75677993515-go8pibrkmvmti3t4jrfti510hr2uon6r.apps.googleusercontent.com",
+    "scopes": ["openid", "email", "profile"]
+  },
+  "host_permissions": [
+    "https://questoes.grancursosonline.com.br/*",
+    "https://www.qconcursos.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "src/background/service_worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Cortex",
+    "default_popup": "src/popup/popup.html"
+  },
+  "side_panel": {
+    "default_path": "src/sidepanel/sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://questoes.grancursosonline.com.br/*"],
+      "js": ["src/content/gran_questions.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
