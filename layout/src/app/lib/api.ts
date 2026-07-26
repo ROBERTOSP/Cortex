@@ -49,4 +49,3 @@ export async function apiFetch<T>(
 
   return (await res.json()) as T;
 }
-
