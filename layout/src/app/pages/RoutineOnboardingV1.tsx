@@ -5,8 +5,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Moon,
   Plus,
+  Sun,
+  Type,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { Checkbox } from "../components/ui/checkbox";
@@ -80,7 +84,7 @@ function Choice({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-2xl border p-4 text-left transition focus-visible:ring-2 focus-visible:ring-primary ${selected ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-muted"}`}
+      className={`rounded-2xl border p-4 text-left font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected ? "border-primary bg-primary/10 text-foreground shadow-sm" : "border-border bg-background text-foreground hover:border-primary hover:bg-primary/5"}`}
     >
       <strong className="block">{title}</strong>
       {detail && (
@@ -94,6 +98,7 @@ function Choice({
 
 export function RoutineOnboardingV1() {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const [step, setStep] = useState(0),
     [loading, setLoading] = useState(true),
     [saving, setSaving] = useState(false),
@@ -134,6 +139,18 @@ export function RoutineOnboardingV1() {
   const [editalReview, setEditalReview] = useState<any>(null);
   const [processingStep, setProcessingStep] = useState(0);
   const [uploadPhase, setUploadPhase] = useState<"idle" | "sending" | "analyzing">("idle");
+  const [largeText, setLargeText] = useState(false);
+  useEffect(() => {
+    const saved = localStorage.getItem("cortex-large-text") === "true";
+    setLargeText(saved);
+    document.documentElement.style.setProperty("--font-size", saved ? "18px" : "16px");
+  }, []);
+  const toggleLargeText = () => {
+    const next = !largeText;
+    setLargeText(next);
+    localStorage.setItem("cortex-large-text", String(next));
+    document.documentElement.style.setProperty("--font-size", next ? "18px" : "16px");
+  };
   useEffect(() => {
     if (!saving || step !== 0 || editalMode === "none") { setProcessingStep(0); return; }
     const interval = window.setInterval(() => setProcessingStep((current) => Math.min(current + 1, editalProcessingSteps.length - 1)), 1800);
@@ -316,9 +333,7 @@ export function RoutineOnboardingV1() {
       if (step < 4) setStep(step + 1);
       else {
         await apiFetch("/routine/me/complete", { method: "POST" });
-        navigate(
-          draftContestId ? `/edital-review/${draftContestId}` : "/schedule",
-        );
+        navigate("/schedule");
       }
     } catch (e: any) {
       setError(e.message || "Não foi possível salvar agora.");
@@ -334,11 +349,17 @@ export function RoutineOnboardingV1() {
     Math.round(((preview?.weekly?.sustainableMinutes || 0) / 60) * 10) / 10;
   const blocks = preview?.weekly?.maximumBlocks || 0;
   return (
-    <main className="onboarding-light mx-auto min-h-screen max-w-5xl px-5 py-8 md:px-8">
-      <header className="mb-5 max-w-2xl">
+    <main className="min-h-screen bg-background px-6 py-10 text-foreground md:px-12">
+      <header className="mb-8 flex w-full items-start justify-between gap-5">
+        <div>
         {step === 0 ? <><p className="text-sm font-medium text-primary">Etapa 1 · Análise do edital</p><h1 className="mt-2 text-3xl font-semibold">Vamos entender seu concurso</h1><p className="mt-2 text-muted-foreground">Envie o edital. O Cortex identifica cargos, datas, regras da prova e conteúdo programático para montar seu plano.</p></> : <><p className="flex items-center gap-2 text-sm font-medium text-primary"><Clock3 className="size-4" />Leva cerca de 3 minutos</p><h1 className="mt-2 text-3xl font-semibold">Vamos conhecer sua rotina</h1><p className="mt-2 text-muted-foreground">Poucas respostas agora ajudam a criar um plano que caiba na sua vida.</p></>}
+        </div>
+        <div className="flex shrink-0 items-center gap-2" aria-label="Preferências de acessibilidade">
+          <Button type="button" variant="outline" size="sm" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Alternar modo claro e escuro" title="Alternar modo claro e escuro">{theme === "dark" ? <Sun /> : <Moon />}</Button>
+          <Button type="button" variant="outline" size="sm" onClick={toggleLargeText} aria-pressed={largeText} aria-label="Alternar texto ampliado" title="Ampliar tamanho do texto"><Type /> <span className="hidden sm:inline">Texto</span></Button>
+        </div>
       </header>
-      <Card className="rounded-3xl p-5 md:p-8">
+      <div className="w-full">
         <div className="grid grid-cols-[auto_1fr_auto] items-end gap-3 border-b pb-5">
           <Button
             variant="outline"
@@ -393,13 +414,13 @@ export function RoutineOnboardingV1() {
             <p className="mt-2 text-muted-foreground">
               Envie o documento ou cole o link. O Cortex encontra os cargos, regras e matérias antes de pedir informações sobre sua rotina.
             </p>
-            <div className="mt-7 max-w-2xl space-y-4">
+            <div className="mt-7 w-full space-y-4">
                 <div>
                   <Label>Envie seu edital para uma análise inteligente</Label>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Em poucos instantes, identificaremos banca, datas, cargos, requisitos, cotas/PCD e as matérias de cada cargo. Você revisa tudo antes de continuar.
                   </p>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <Choice selected={editalMode === "none"} onClick={() => setEditalMode("none")} title="Ainda não" />
                     <Choice selected={editalMode === "pdf"} onClick={() => setEditalMode("pdf")} title="Enviar PDF" />
                     <Choice selected={editalMode === "link"} onClick={() => setEditalMode("link")} title="Colar link" />
@@ -703,7 +724,7 @@ export function RoutineOnboardingV1() {
             </p>
           </section>
         )}
-      </Card>
+      </div>
     </main>
   );
 }

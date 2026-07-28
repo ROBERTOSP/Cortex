@@ -228,7 +228,7 @@ export class ContestsService {
       const parser = new PDFParse({ data: file.buffer });
       const data = await parser.getText();
       await parser.destroy();
-      const text = data.text;
+      const text = this.selectRelevantEditalText((data as any).pages, data.text);
 
       return this.createForUser(userId, {
         name: meta?.name,
@@ -243,6 +243,29 @@ export class ContestsService {
       console.error('Erro ao processar edital:', error);
       throw new BadRequestException('Falha ao processar o edital');
     }
+  }
+
+  private selectRelevantEditalText(pages: Array<{ text?: string }> | undefined, fallback: string) {
+    if (!Array.isArray(pages) || pages.length === 0) return fallback;
+    const normalized = pages.map((page) => page.text || '');
+    const signals = [
+      /ANEXO|CONTE[ÚU]DO\s+PROGRAM|CONHECIMENTOS\s+ESPEC[IÍ]FICOS|DISCIPLINA|MAT[ÉE]RIA/i,
+      /CARGO|EMPREGO|FUN[CÇ][AÃ]O|PERFIL|VAGAS|LOCALIDADE/i,
+      /PROVA|QUEST[ÕO]ES|PESO|PONTUA[CÇ][AÃ]O|DURA[CÇ][AÃ]O/i,
+      /REQUISITO|ESCOLARIDADE|FORMA[CÇ][AÃ]O|GRADUA[CÇ][AÃ]O|PCD|DEFICI[ÊE]NCIA|COTA/i,
+      /CRONOGRAMA|INSCRI[CÇ][AÃ]O|DATA|RESULTADO|RECURSO/i,
+    ];
+    const ranked = normalized
+      .map((page, index) => ({ index, score: signals.reduce((total, signal) => total + (signal.test(page) ? 1 : 0), 0) }))
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score || a.index - b.index);
+    if (ranked.length < 2) return fallback;
+    const selected = new Set<number>();
+    ranked.slice(0, 16).forEach(({ index }) => {
+      for (let page = Math.max(0, index - 1); page <= Math.min(normalized.length - 1, index + 2); page += 1) selected.add(page);
+    });
+    const text = [...selected].sort((a, b) => a - b).map((index) => normalized[index]).join('\n\n');
+    return text.length >= 4000 ? text.slice(0, 60000) : fallback;
   }
 
   async parseAndCreateFromEditalLink(
