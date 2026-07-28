@@ -79,7 +79,9 @@ export function ProtectedRootLayout() {
   }
 
   const isOnboardingRoute =
-    location.pathname === "/onboarding" || location.pathname === "/onboarding-v1";
+    location.pathname === "/onboarding" ||
+    location.pathname === "/onboarding-v1" ||
+    location.pathname.startsWith("/edital-review/");
 
   const onboardingCompleted = legacyOnboardingCompleted || routineOnboardingCompleted;
 
