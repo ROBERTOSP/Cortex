@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-const pdf = require('pdf-parse');
+import { PDFParse } from 'pdf-parse';
 import { DatabaseService } from '../database/database.service';
 import { AiService, type EditalExtraction } from '../ai/ai.service';
 import { normalizeTaxonomyKey, resolveBoardAlias } from '../questions/taxonomy-aliases';
@@ -225,7 +225,9 @@ export class ContestsService {
     }
 
     try {
-      const data = await pdf(file.buffer);
+      const parser = new PDFParse({ data: file.buffer });
+      const data = await parser.getText();
+      await parser.destroy();
       const text = data.text;
 
       return this.createForUser(userId, {
