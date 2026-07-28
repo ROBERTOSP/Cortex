@@ -139,6 +139,9 @@ export function RoutineOnboardingV1() {
     return () => window.clearInterval(interval);
   }, [saving, step, editalMode]);
   useEffect(() => {
+    if (draftContestId) navigate(`/edital-review/${draftContestId}`);
+  }, [draftContestId, navigate]);
+  useEffect(() => {
     let cancel = false;
     (async () => {
       try {
