@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 const pdf = require('pdf-parse');
 import { DatabaseService } from '../database/database.service';
-import { AiService } from '../ai/ai.service';
+import { AiService, type EditalExtraction } from '../ai/ai.service';
 import { normalizeTaxonomyKey, resolveBoardAlias } from '../questions/taxonomy-aliases';
 
 type StructuredSubject = {
@@ -160,6 +160,7 @@ export class ContestsService {
       editalText?: string;
       editalSource?: EditalSource;
       editalSourceUrl?: string;
+      extraction?: EditalExtraction;
     },
   ) {
     const name = (data.name || '').trim();
@@ -167,7 +168,7 @@ export class ContestsService {
     const board = (data.board || '').trim();
     const editalText = (data.editalText || '').trim();
 
-    if (!targetJob) {
+    if (!targetJob && !editalText) {
       throw new BadRequestException('Cargo pretendido é obrigatório');
     }
 
@@ -175,15 +176,16 @@ export class ContestsService {
       ? CONTEST_CATALOG.find((item) => item.id === data.templateId)
       : null;
 
-    const structure = editalText
-      ? await this.ai.structureEdital(editalText)
+    const extraction = data.extraction || (editalText ? await this.ai.extractEditalDetails(editalText) : null);
+    const structure = extraction
+      ? { subjects: [] }
       : template
       ? { subjects: template.subjects }
       : { subjects: [] };
 
     const resolvedName = name || template?.name || 'Plano Personalizado';
-    const resolvedBoard = board || template?.board || 'Banca não informada';
-    const resolvedExamDate = data.examDate || template?.examDate || null;
+    const resolvedBoard = board || extraction?.board || template?.board || 'Banca não informada';
+    const resolvedExamDate = data.examDate || extraction?.examDate || template?.examDate || null;
 
     const source = data.editalSource || (editalText ? 'TEXT' : template ? 'CATALOG' : undefined);
     const needsReview = Boolean(editalText) && source !== 'CATALOG';
@@ -191,13 +193,13 @@ export class ContestsService {
       data: {
         userId,
         name: resolvedName,
-        targetJob,
+        targetJob: targetJob || 'Cargo a selecionar',
         board: resolvedBoard,
         examDate: resolvedExamDate ? new Date(resolvedExamDate) : null,
         status: needsReview ? 'DRAFT' : 'ACTIVE',
         editalSource: source,
         editalSourceUrl: data.editalSourceUrl || null,
-        editalDraft: needsReview ? structure : undefined,
+        editalDraft: needsReview && extraction ? extraction : undefined,
         editalExtractedAt: needsReview ? new Date() : null,
         editalConfirmedAt: needsReview ? null : new Date(),
       },
@@ -205,6 +207,9 @@ export class ContestsService {
 
     if (!needsReview) {
       await this.createKnowledgeTree(contest.id, structure.subjects || []);
+    }
+    if (needsReview && extraction) {
+      await this.database.editalVersion.create({ data: { contestId: contest.id, sequence: 1, sourceType: source || 'PDF', sourceUrl: data.editalSourceUrl || null, extraction } });
     }
 
     return this.findOneForUser(userId, contest.id);
@@ -331,13 +336,16 @@ export class ContestsService {
   async confirmEditalForUser(
     userId: string,
     contestId: string,
-    data: { name?: string; targetJob?: string; board?: string; examDate?: string; subjects?: unknown },
+    data: { name?: string; targetJob?: string; selectedJob?: string; board?: string; examDate?: string; subjects?: unknown },
   ) {
     const contest = await this.database.contest.findFirst({ where: { id: contestId, userId } });
     if (!contest) throw new NotFoundException('Concurso não encontrado');
     if (contest.status !== 'DRAFT') throw new BadRequestException('Este edital não está aguardando confirmação');
 
-    const draft = this.normalizeStructure(data.subjects ?? contest.editalDraft);
+    const selectedJob = (data.selectedJob || data.targetJob || contest.selectedJob || contest.targetJob).trim();
+    const extractedJobs = this.readExtractedJobs(contest.editalDraft);
+    const selectedExtraction = extractedJobs.find((job) => job.name === selectedJob);
+    const draft = this.normalizeStructure(data.subjects ?? selectedExtraction?.subjects ?? contest.editalDraft);
     if (draft.subjects.length === 0) {
       throw new BadRequestException('Confirme ao menos uma disciplina antes de criar a rotina');
     }
@@ -349,7 +357,8 @@ export class ContestsService {
       where: { id: contestId },
       data: {
         name: (data.name || contest.name).trim(),
-        targetJob: (data.targetJob || contest.targetJob).trim(),
+        targetJob: (data.targetJob || selectedJob || contest.targetJob).trim(),
+        selectedJob,
         board: (data.board || contest.board).trim(),
         examDate: data.examDate ? new Date(data.examDate) : contest.examDate,
         status: 'ACTIVE',
@@ -358,6 +367,12 @@ export class ContestsService {
       },
     });
     return this.findOneForUser(userId, contestId);
+  }
+
+  private readExtractedJobs(value: unknown): EditalExtraction['jobs'] {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+    const jobs = (value as { jobs?: unknown }).jobs;
+    return Array.isArray(jobs) ? jobs as EditalExtraction['jobs'] : [];
   }
 
   private normalizeStructure(value: unknown): { subjects: StructuredSubject[] } {

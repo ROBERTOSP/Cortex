@@ -291,6 +291,8 @@ model Contest {
   editalDraft     Json?    @map("edital_draft")
   editalExtractedAt DateTime? @map("edital_extracted_at")
   editalConfirmedAt DateTime? @map("edital_confirmed_at")
+  selectedJob       String?  @map("selected_job")
+  editalVersions    EditalVersion[]
   
   nodes           KnowledgeNode[]
   
@@ -298,6 +300,26 @@ model Contest {
   updatedAt   DateTime @updatedAt
 
   @@map("contests")
+}
+
+model EditalVersion {
+  id              String   @id @default(uuid())
+  contestId       String   @map("contest_id")
+  contest         Contest  @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  sequence        Int
+  sourceType      String   @map("source_type")
+  sourceUrl       String?  @map("source_url")
+  fileName        String?  @map("file_name")
+  contentHash     String?  @map("content_hash")
+  extraction      Json     @map("extraction")
+  status          String   @default("REVIEW")
+  isActive        Boolean  @default(false) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  activatedAt     DateTime? @map("activated_at")
+
+  @@unique([contestId, sequence])
+  @@index([contestId, isActive])
+  @@map("edital_versions")
 }
 
 model KnowledgeNode {

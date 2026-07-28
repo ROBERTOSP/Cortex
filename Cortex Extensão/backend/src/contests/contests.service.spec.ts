@@ -10,9 +10,13 @@ describe('ContestsService', () => {
     knowledgeNode: {
       create: jest.fn(),
     },
+    editalVersion: {
+      create: jest.fn(),
+    },
   };
   const ai: any = {
     structureEdital: jest.fn(),
+    extractEditalDetails: jest.fn(),
   };
 
   beforeEach(() => {
@@ -46,13 +50,11 @@ describe('ContestsService', () => {
     database.contest.create.mockResolvedValue({ id: 'c1' });
     database.contest.findFirst.mockResolvedValue({ id: 'c1', nodes: [] });
     database.knowledgeNode.create.mockResolvedValue({ id: 'n1' });
-    ai.structureEdital.mockResolvedValue({
-      subjects: [
-        {
-          name: 'Direito Constitucional',
-          topics: [{ name: 'Direitos Fundamentais', subtopics: ['A'] }],
-        },
-      ],
+    ai.extractEditalDetails.mockResolvedValue({
+      summary: 'Resumo', board: 'FGV', organization: null, examDate: null, notices: [],
+      jobs: [{ name: 'Analista', requirements: [], vacancies: null, quotas: [], pcd: [], notes: [], subjects: [
+        { name: 'Direito Constitucional', topics: [{ name: 'Direitos Fundamentais', subtopics: ['A'] }] },
+      ] }],
     });
 
     const service = new ContestsService(database, ai);
@@ -63,7 +65,7 @@ describe('ContestsService', () => {
       editalText: 'Texto do edital',
     });
 
-    expect(ai.structureEdital).toHaveBeenCalledWith('Texto do edital');
+    expect(ai.extractEditalDetails).toHaveBeenCalledWith('Texto do edital');
     expect(database.contest.create).toHaveBeenCalled();
   });
 });

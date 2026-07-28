@@ -1,6 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
+export type EditalExtraction = {
+  summary: string;
+  board: string | null;
+  organization: string | null;
+  examDate: string | null;
+  jobs: Array<{ name: string; requirements: string[]; vacancies: string | null; quotas: string[]; pcd: string[]; subjects: Array<{ name: string; topics: Array<{ name: string; subtopics: string[] }> }>; notes: string[] }>;
+  notices: string[];
+};
+
 @Injectable()
 export class AiService {
   private genAI: GoogleGenerativeAI | null = null;
@@ -50,6 +59,25 @@ export class AiService {
     } catch (error) {
       console.error('Erro na IA Gemini:', error);
       throw new Error('Não foi possível extrair uma estrutura confiável do edital');
+    }
+  }
+
+  async extractEditalDetails(text: string): Promise<EditalExtraction> {
+    if (!this.model) throw new Error('Serviço de análise de edital não configurado');
+    const prompt = `Analise este edital brasileiro. Retorne APENAS JSON válido, sem Markdown. Não invente dados: use null ou [] quando ausente.
+Formato exato:
+{"summary":"resumo simples","board":null,"organization":null,"examDate":null,"jobs":[{"name":"","requirements":[],"vacancies":null,"quotas":[],"pcd":[],"subjects":[{"name":"","topics":[{"name":"","subtopics":[]}]}],"notes":[]}],"notices":[]}
+Regras: examDate em YYYY-MM-DD quando explícita; quotas e pcd devem registrar regras relevantes; subjects deve refletir conteúdo do cargo, incluindo conteúdo comum quando aplicável.
+Texto do edital:\n${text.substring(0, 60000)}`;
+    try {
+      const result = await this.model.generateContent(prompt);
+      const jsonText = (await result.response).text().replace(/```json|```/g, '').trim();
+      const data = JSON.parse(jsonText) as EditalExtraction;
+      if (!Array.isArray(data.jobs)) throw new Error('Cargos não encontrados na resposta');
+      return data;
+    } catch (error) {
+      console.error('Erro na extração detalhada do edital:', error);
+      throw new Error('Não foi possível extrair os dados do edital com segurança');
     }
   }
 

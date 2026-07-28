@@ -108,6 +108,7 @@ export class ContestsController {
     return this.contestsService.confirmEditalForUser(userId, contestId, {
       name: typeof body.name === 'string' ? body.name : undefined,
       targetJob: typeof body.targetJob === 'string' ? body.targetJob : undefined,
+      selectedJob: typeof body.selectedJob === 'string' ? body.selectedJob : undefined,
       board: typeof body.board === 'string' ? body.board : undefined,
       examDate: typeof body.examDate === 'string' ? body.examDate : undefined,
       subjects: body.subjects,

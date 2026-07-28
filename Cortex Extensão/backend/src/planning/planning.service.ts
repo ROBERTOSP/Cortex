@@ -108,18 +108,21 @@ export class PlanningService {
       this.database.contest.findFirst({
         where: { userId, status: 'ACTIVE' },
         orderBy: { createdAt: 'desc' },
-        include: { nodes: { where: { type: 'SUBJECT' }, include: { children: true } } },
+        include: { nodes: { where: { type: 'SUBJECT' }, orderBy: { strategicPriority: 'desc' }, include: { children: { orderBy: { strategicPriority: 'desc' } } } } },
       }),
     ]);
 
     const adaptiveInsights = this.buildAdaptiveInsights(attempts);
-    const editalInsights = (contest?.nodes || []).map((node) => ({
+    const editalInsights = (contest?.nodes || []).map((node) => {
+      const topTopic = node.children[0];
+      const priority = Math.round(node.strategicPriority || topTopic?.strategicPriority || 55);
+      return {
       subject: node.name,
-      topic: node.children[0]?.name || 'Fundamentos',
+      topic: topTopic?.name || 'Fundamentos',
       attempts: 0, accuracy: 0, hesitationRate: 0, avgLatencySeconds: 0,
-      daysSinceLastAttempt: 99, priority: 55, recommendedTaskType: 'reading' as TaskType,
-      reason: 'Matéria do edital confirmado. Vamos construir sua base.',
-    }));
+      daysSinceLastAttempt: 99, priority, recommendedTaskType: 'reading' as TaskType,
+      reason: priority > 0 ? 'Prioridade calculada pela incidência e recência da banca no edital confirmado.' : 'Matéria do edital confirmado. Vamos construir sua base.',
+    }; });
     const insights = editalInsights.length > 0 ? editalInsights : await this.ensureStarterInsights(adaptiveInsights);
     const schedule = routine?.timezone && routine.availabilityWindows.length > 0
       ? this.buildScheduleFromRoutine(insights, routine)
@@ -143,6 +146,8 @@ export class PlanningService {
         dailyMinutes: schedule.dailyMinutes,
         weeklyMinutes: schedule.dailyMinutes * 7,
         blockMinutes: schedule.blockMinutes,
+        examDate: contest?.examDate?.toISOString().slice(0, 10) || null,
+        daysUntilExam: contest?.examDate ? Math.max(0, Math.ceil((contest.examDate.getTime() - Date.now()) / 86_400_000)) : null,
         strongestSubject,
         weakestSubject,
         subjectsInFocus: sortedInsights.slice(0, 4).map((item) => item.subject),
