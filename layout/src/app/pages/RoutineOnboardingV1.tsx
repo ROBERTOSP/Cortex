@@ -270,11 +270,12 @@ export function RoutineOnboardingV1() {
     }
     if (contest?.status === "DRAFT") setDraftContestId(contest.id);
     setContestCreated(true);
+    return contest;
   };
   const advance = async () => {
     setError("");
-    if (step === 0 && !goal.title.trim()) {
-      setError("Conte qual é seu objetivo para continuar.");
+    if (step === 0 && editalMode === "none" && !goal.title.trim()) {
+      setError("Envie o edital ou informe um objetivo para continuar.");
       return;
     }
     if (step === 2 && !windows.length) {
@@ -284,8 +285,12 @@ export function RoutineOnboardingV1() {
     setSaving(true);
     try {
       if (step === 0) {
+        const contest = await createContest();
+        if (contest?.status === "DRAFT") {
+          navigate(`/edital-review/${contest.id}`);
+          return;
+        }
         await saveGoal();
-        await createContest();
       }
       if (step === 1) await saveRoutine();
       if (step === 2) await saveWindows();
@@ -377,7 +382,7 @@ export function RoutineOnboardingV1() {
             </p>
             <div className="mt-7 max-w-2xl space-y-4">
                 <div>
-                  <Label htmlFor="objective">Qual é seu objetivo?</Label>
+                  <Label htmlFor="objective">Nome do concurso <span className="font-normal text-muted-foreground">(opcional)</span></Label>
                   <Input
                     id="objective"
                     className="mt-2"
@@ -385,7 +390,7 @@ export function RoutineOnboardingV1() {
                     onChange={(e) =>
                       setGoal({ ...goal, title: e.target.value })
                     }
-                    placeholder="Ex.: Polícia Federal"
+                    placeholder="Ex.: Polícia Federal — a IA pode preencher depois"
                   />
                 </div>
                 <div>
@@ -457,9 +462,9 @@ export function RoutineOnboardingV1() {
                   </label>
                 </div>
                 <div>
-                  <Label>Você já tem o edital?</Label>
+                  <Label>Envie seu edital para uma análise inteligente</Label>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Podemos analisar o PDF ou um link agora. Você também pode seguir e adicionar depois.
+                    Em poucos instantes, identificaremos banca, datas, cargos, requisitos, cotas/PCD e as matérias de cada cargo. Você revisa tudo antes de continuar.
                   </p>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <Choice selected={editalMode === "none"} onClick={() => setEditalMode("none")} title="Ainda não" />
@@ -467,7 +472,7 @@ export function RoutineOnboardingV1() {
                     <Choice selected={editalMode === "link"} onClick={() => setEditalMode("link")} title="Colar link" />
                     <Choice selected={editalMode === "catalog"} onClick={() => setEditalMode("catalog")} title="Usar catálogo" />
                   </div>
-                  {editalMode === "pdf" && <Input className="mt-3" type="file" accept="application/pdf,.pdf" onChange={(event) => setEditalFile(event.target.files?.[0] || null)} />}
+                  {editalMode === "pdf" && <div className="mt-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4"><input id="edital-pdf" className="sr-only" type="file" accept="application/pdf,.pdf" onChange={(event) => setEditalFile(event.target.files?.[0] || null)} /><label htmlFor="edital-pdf" className="flex cursor-pointer items-center justify-between gap-3"><span><strong className="block">Selecionar PDF do edital</strong><span className="mt-1 block text-sm text-muted-foreground">{editalFile ? `Arquivo selecionado: ${editalFile.name}` : "Clique aqui para escolher o arquivo"}</span></span><span className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground">Escolher arquivo</span></label></div>}
                   {editalMode === "link" && <Input className="mt-3" type="url" value={editalLink} onChange={(event) => setEditalLink(event.target.value)} placeholder="https://.../edital.pdf" />}
                   {editalMode === "catalog" && <select className="mt-3 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={catalogId} onChange={(event) => setCatalogId(event.target.value)}><option value="">Escolha um edital</option>{catalog.map((item) => <option key={item.id} value={item.id}>{item.name} — {item.targetJob}</option>)}</select>}
                 </div>
