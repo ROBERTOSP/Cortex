@@ -362,7 +362,7 @@ export function RoutineOnboardingV1() {
             </div>
           </div>
           <Button onClick={advance} disabled={saving}>
-            {saving && step === 0 ? "Analisando edital…" : step === 4 ? "Criar minha rotina" : "Avançar"}
+            {saving && step === 0 ? "Analisando edital…" : step === 0 && editalMode !== "none" ? "Analisar edital" : step === 4 ? "Criar minha rotina" : "Avançar"}
             <ChevronRight />
           </Button>
         </div>
@@ -387,86 +387,6 @@ export function RoutineOnboardingV1() {
               Envie o documento ou cole o link. O Cortex encontra os cargos, regras e matérias antes de pedir informações sobre sua rotina.
             </p>
             <div className="mt-7 max-w-2xl space-y-4">
-                <div>
-                  <Label htmlFor="objective">Nome do concurso <span className="font-normal text-muted-foreground">(opcional)</span></Label>
-                  <Input
-                    id="objective"
-                    className="mt-2"
-                    value={goal.title}
-                    onChange={(e) =>
-                      setGoal({ ...goal, title: e.target.value })
-                    }
-                    placeholder="Ex.: Polícia Federal — a IA pode preencher depois"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="job">
-                    Cargo pretendido{" "}
-                    <span className="font-normal text-muted-foreground">
-                      (opcional)
-                    </span>
-                  </Label>
-                  <Input
-                    id="job"
-                    className="mt-2"
-                    value={goal.targetJob}
-                    onChange={(e) =>
-                      setGoal({ ...goal, targetJob: e.target.value })
-                    }
-                    placeholder="Ex.: Agente"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="board">
-                    Banca{" "}
-                    <span className="font-normal text-muted-foreground">
-                      (opcional)
-                    </span>
-                  </Label>
-                  <Input
-                    id="board"
-                    className="mt-2"
-                    value={goal.board}
-                    onChange={(e) =>
-                      setGoal({ ...goal, board: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="date">
-                    Data da prova{" "}
-                    <span className="font-normal text-muted-foreground">
-                      (opcional)
-                    </span>
-                  </Label>
-                  <Input
-                    id="date"
-                    className="mt-2"
-                    type="date"
-                    disabled={goal.examDateUnknown}
-                    value={goal.examDate}
-                    onChange={(e) =>
-                      setGoal({
-                        ...goal,
-                        examDate: e.target.value,
-                        examDateUnknown: false,
-                      })
-                    }
-                  />
-                  <label className="mt-2 flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={goal.examDateUnknown}
-                      onCheckedChange={(v) =>
-                        setGoal({
-                          ...goal,
-                          examDateUnknown: Boolean(v),
-                          examDate: "",
-                        })
-                      }
-                    />
-                    Ainda não sei a data
-                  </label>
-                </div>
                 <div>
                   <Label>Envie seu edital para uma análise inteligente</Label>
                   <p className="mt-1 text-sm text-muted-foreground">
