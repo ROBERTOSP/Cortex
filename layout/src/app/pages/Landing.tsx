@@ -41,7 +41,7 @@ export function Landing() {
     <main className="min-h-screen bg-background text-foreground">
       <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
         <Link to="/" className="flex items-center gap-3" aria-label="Página inicial do Cortex">
-          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-primary">
+          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl">
             <img src="/brand/cortex-logo.png" alt="" className="h-full w-full object-contain" />
           </span>
           <span>

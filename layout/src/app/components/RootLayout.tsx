@@ -113,7 +113,7 @@ export function RootLayout() {
   const SidebarContent = () => (
     <>
       <div className="flex items-center gap-2.5 px-5 py-5 border-b border-sidebar-border">
-        <div className="w-9 h-9 rounded-xl overflow-hidden bg-primary flex items-center justify-center shadow-sm">
+        <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center">
           <img src="/brand/cortex-logo.png" alt="Cortex" className="h-full w-full object-contain" />
         </div>
         <div>

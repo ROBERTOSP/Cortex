@@ -73,7 +73,7 @@ export function Login() {
     <main className="min-h-screen bg-background px-5 py-6 text-foreground sm:px-8">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Voltar para a página inicial</Link>
-        <Link to="/" className="flex items-center gap-2" aria-label="Cortex"><span className="h-9 w-9 overflow-hidden rounded-xl bg-primary"><img src="/brand/cortex-logo.png" alt="" className="h-full w-full object-contain" /></span><strong>Cortex</strong></Link>
+        <Link to="/" className="flex items-center gap-2" aria-label="Cortex"><span className="h-9 w-9 overflow-hidden rounded-xl"><img src="/brand/cortex-logo.png" alt="" className="h-full w-full object-contain" /></span><strong>Cortex</strong></Link>
       </div>
 
       <section className="mx-auto grid min-h-[calc(100vh-96px)] w-full max-w-6xl items-start gap-10 py-10 lg:grid-cols-[.95fr_1.05fr] lg:items-center">
