@@ -131,6 +131,7 @@ export function RoutineOnboardingV1() {
   const [editalLink, setEditalLink] = useState("");
   const [contestCreated, setContestCreated] = useState(false);
   const [draftContestId, setDraftContestId] = useState<string | null>(null);
+  const [editalReview, setEditalReview] = useState<any>(null);
   const [processingStep, setProcessingStep] = useState(0);
   const [uploadPhase, setUploadPhase] = useState<"idle" | "sending" | "analyzing">("idle");
   useEffect(() => {
@@ -138,9 +139,6 @@ export function RoutineOnboardingV1() {
     const interval = window.setInterval(() => setProcessingStep((current) => Math.min(current + 1, editalProcessingSteps.length - 1)), 1800);
     return () => window.clearInterval(interval);
   }, [saving, step, editalMode]);
-  useEffect(() => {
-    if (draftContestId) navigate(`/edital-review/${draftContestId}`);
-  }, [draftContestId, navigate]);
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -280,7 +278,7 @@ export function RoutineOnboardingV1() {
         body: JSON.stringify({ ...meta, url: editalLink.trim() }),
       });
     }
-    if (contest?.status === "DRAFT") setDraftContestId(contest.id);
+    if (contest?.status === "DRAFT") { setDraftContestId(contest.id); setEditalReview(contest); }
     setContestCreated(true);
     return contest;
   };
@@ -299,10 +297,7 @@ export function RoutineOnboardingV1() {
       if (step === 0) {
         const contest = await createContest();
         if (editalMode !== "none" && !contest) throw new Error("O arquivo não foi enviado. Selecione o edital novamente e tente mais uma vez.");
-        if (contest?.status === "DRAFT") {
-          navigate(`/edital-review/${contest.id}`);
-          return;
-        }
+        if (contest?.status === "DRAFT") return;
         await saveGoal();
       }
       if (step === 1) await saveRoutine();
@@ -341,16 +336,7 @@ export function RoutineOnboardingV1() {
   return (
     <main className="onboarding-light mx-auto min-h-screen max-w-5xl px-5 py-8 md:px-8">
       <header className="mb-5 max-w-2xl">
-        <p className="flex items-center gap-2 text-sm font-medium text-primary">
-          <Clock3 className="size-4" />
-          Leva cerca de 3 minutos
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold">
-          Vamos conhecer sua rotina
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          Poucas respostas agora ajudam a criar um plano que caiba na sua vida.
-        </p>
+        {step === 0 ? <><p className="text-sm font-medium text-primary">Etapa 1 · Análise do edital</p><h1 className="mt-2 text-3xl font-semibold">Vamos entender seu concurso</h1><p className="mt-2 text-muted-foreground">Envie o edital. O Cortex identifica cargos, datas, regras da prova e conteúdo programático para montar seu plano.</p></> : <><p className="flex items-center gap-2 text-sm font-medium text-primary"><Clock3 className="size-4" />Leva cerca de 3 minutos</p><h1 className="mt-2 text-3xl font-semibold">Vamos conhecer sua rotina</h1><p className="mt-2 text-muted-foreground">Poucas respostas agora ajudam a criar um plano que caiba na sua vida.</p></>}
       </header>
       <Card className="rounded-3xl p-5 md:p-8">
         <div className="grid grid-cols-[auto_1fr_auto] items-end gap-3 border-b pb-5">
@@ -396,7 +382,9 @@ export function RoutineOnboardingV1() {
           </div>
           </>
         )}
-        {step === 0 && (
+        {step === 0 && editalReview ? (
+          <section className="py-7"><p className="text-sm font-semibold text-primary">Seu edital foi analisado</p><h2 className="mt-1 text-3xl font-semibold">{editalReview.name}</h2><p className="mt-3 text-muted-foreground">{editalReview.editalDraft?.summary || "Confira os dados extraídos antes de continuar."}</p><div className="mt-7 grid gap-5 md:grid-cols-2"><div><h3 className="font-semibold">Cargos identificados</h3><div className="mt-3 space-y-2">{(editalReview.editalDraft?.jobs || []).map((job: any) => <button key={job.name} type="button" onClick={() => setGoal({ ...goal, targetJob: job.name })} className={`w-full rounded-xl border p-4 text-left ${goal.targetJob === job.name ? "border-primary bg-primary/10" : "bg-background"}`}><strong>{job.name}</strong><span className="mt-1 block text-sm text-muted-foreground">{job.requirements?.join(" · ") || "Requisitos disponíveis no edital"}</span></button>)}</div></div><div><h3 className="font-semibold">Matérias do cargo</h3><ul className="mt-3 space-y-2 text-sm">{((editalReview.editalDraft?.jobs || []).find((job: any) => job.name === goal.targetJob)?.subjects || []).map((subject: any) => <li key={subject.name} className="rounded-xl border p-3">{subject.name}</li>)}</ul></div></div><div className="mt-8 flex justify-end"><Button onClick={() => setStep(1)} disabled={!goal.targetJob}>Confirmar cargo e continuar <ChevronRight /></Button></div></section>
+        ) : step === 0 && (
           <section className="py-7">
             <p className="text-sm font-semibold text-primary">Conheça seu edital</p>
             <h2 className="mt-1 text-2xl font-semibold">
