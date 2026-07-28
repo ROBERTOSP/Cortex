@@ -19,7 +19,7 @@ export class AiService {
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey) {
       this.genAI = new GoogleGenerativeAI(apiKey);
-      this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { responseMimeType: 'application/json' } });
     }
   }
 
@@ -72,13 +72,27 @@ Texto do edital:\n${text.substring(0, 60000)}`;
     try {
       const result = await this.model.generateContent(prompt);
       const jsonText = (await result.response).text().replace(/```json|```/g, '').trim();
-      const data = JSON.parse(jsonText) as EditalExtraction;
+      const data = JSON.parse(this.extractJsonObject(jsonText)) as EditalExtraction;
       if (!Array.isArray(data.jobs)) throw new Error('Cargos não encontrados na resposta');
       return data;
     } catch (error) {
       console.error('Erro na extração detalhada do edital:', error);
       throw new Error('Não foi possível extrair os dados do edital com segurança');
     }
+  }
+
+  private extractJsonObject(value: string): string {
+    const start = value.indexOf('{');
+    if (start < 0) throw new Error('A resposta não contém JSON');
+    let depth = 0; let inString = false; let escaped = false;
+    for (let index = start; index < value.length; index += 1) {
+      const char = value[index];
+      if (inString) { if (escaped) escaped = false; else if (char === '\\') escaped = true; else if (char === '"') inString = false; continue; }
+      if (char === '"') { inString = true; continue; }
+      if (char === '{') depth += 1;
+      if (char === '}') { depth -= 1; if (depth === 0) return value.slice(start, index + 1); }
+    }
+    throw new Error('JSON incompleto na resposta');
   }
 
   async explainQuestion(input: {

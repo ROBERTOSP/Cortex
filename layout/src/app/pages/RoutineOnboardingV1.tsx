@@ -362,7 +362,7 @@ export function RoutineOnboardingV1() {
             </div>
           </div>
           <Button onClick={advance} disabled={saving}>
-            {step === 4 ? "Criar minha rotina" : "Avançar"}
+            {saving && step === 0 ? "Analisando edital…" : step === 4 ? "Criar minha rotina" : "Avançar"}
             <ChevronRight />
           </Button>
         </div>
@@ -370,6 +370,12 @@ export function RoutineOnboardingV1() {
           <p className="mt-4 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
             {error}
           </p>
+        )}
+        {saving && step === 0 && editalMode !== "none" && (
+          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span><strong className="block text-foreground">Estamos analisando seu edital</strong>Extraindo cargos, requisitos, datas e matérias. Isso pode levar alguns instantes.</span>
+          </div>
         )}
         {step === 0 && (
           <section className="py-7">
