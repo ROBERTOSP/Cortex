@@ -64,6 +64,7 @@ const steps = [
   "O que ocupa seu tempo",
   "Sua capacidade inicial",
 ];
+const editalProcessingSteps = ["Lendo o arquivo do edital", "Localizando datas, banca e regras", "Identificando cargos e requisitos", "Organizando matérias por cargo", "Preparando a revisão para você"];
 function Choice({
   selected,
   onClick,
@@ -130,6 +131,12 @@ export function RoutineOnboardingV1() {
   const [editalLink, setEditalLink] = useState("");
   const [contestCreated, setContestCreated] = useState(false);
   const [draftContestId, setDraftContestId] = useState<string | null>(null);
+  const [processingStep, setProcessingStep] = useState(0);
+  useEffect(() => {
+    if (!saving || step !== 0 || editalMode === "none") { setProcessingStep(0); return; }
+    const interval = window.setInterval(() => setProcessingStep((current) => Math.min(current + 1, editalProcessingSteps.length - 1)), 1800);
+    return () => window.clearInterval(interval);
+  }, [saving, step, editalMode]);
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -372,6 +379,10 @@ export function RoutineOnboardingV1() {
           </p>
         )}
         {saving && step === 0 && editalMode !== "none" && (
+          <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-5">
+            <div className="flex items-center gap-3"><span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" /><span><strong className="block text-foreground">Analisando seu edital</strong><span className="text-sm text-muted-foreground">Você não precisa fazer nada agora.</span></span></div>
+            <ol className="mt-5 space-y-3">{editalProcessingSteps.map((label, index) => <li key={label} className={`flex items-center gap-3 text-sm transition-opacity ${index <= processingStep ? "text-foreground" : "text-muted-foreground/50"}`}><span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${index < processingStep ? "bg-primary text-primary-foreground" : index === processingStep ? "border-2 border-primary text-primary" : "border bg-background"}`}>{index < processingStep ? "✓" : index + 1}</span><span>{label}{index === processingStep ? <span className="ml-2 animate-pulse text-primary">em andamento…</span> : null}</span></li>)}</ol>
+          </div>
           <div className="mt-4 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
             <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <span><strong className="block text-foreground">Estamos analisando seu edital</strong>Extraindo cargos, requisitos, datas e matérias. Isso pode levar alguns instantes.</span>
