@@ -153,7 +153,7 @@ export function Dashboard() {
             consistencia. O proximo melhor passo ja esta pronto.
           </p>
         </div>
-        <Button className="shrink-0 gap-2 h-10" onClick={() => navigate("/study")}>
+        <Button className="shrink-0 gap-2 h-10" onClick={() => navigate("/app/study")}>
           <Play className="w-4 h-4" />
           Iniciar sessao
         </Button>
@@ -170,7 +170,7 @@ export function Dashboard() {
               compromissos e check-in como teto).
             </div>
           </div>
-          <Button className="gap-2" onClick={() => navigate("/onboarding-v1")}>
+          <Button className="gap-2" onClick={() => navigate("/app/onboarding-v1")}>
             Continuar onboarding v1
           </Button>
         </div>
@@ -242,7 +242,7 @@ export function Dashboard() {
               variant="outline"
               size="sm"
               className="gap-1.5"
-              onClick={() => navigate("/study")}
+              onClick={() => navigate("/app/study")}
             >
               <Zap className="w-3.5 h-3.5" />
               Continuar estudo

@@ -79,14 +79,14 @@ export function ProtectedRootLayout() {
   }
 
   const isOnboardingRoute =
-    location.pathname === "/onboarding" ||
-    location.pathname === "/onboarding-v1" ||
-    location.pathname.startsWith("/edital-review/");
+    location.pathname === "/app/onboarding" ||
+    location.pathname === "/app/onboarding-v1" ||
+    location.pathname.startsWith("/app/edital-review/");
 
   const onboardingCompleted = legacyOnboardingCompleted || routineOnboardingCompleted;
 
   if (!onboardingCompleted && !isOnboardingRoute) {
-    return <Navigate to="/onboarding-v1" replace />;
+    return <Navigate to="/app/onboarding-v1" replace />;
   }
 
   return <RootLayout />;

@@ -40,38 +40,38 @@ export function RootLayout() {
   };
 
   const navItems = [
-    { path: "/", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/study", label: "Deep Work", icon: Zap, badge: "Hoje" },
-    { path: "/analytics", label: "Analytics", icon: BarChart2 },
-    { path: "/schedule", label: "Cronograma", icon: CalendarDays },
+    { path: "/app", label: "Dashboard", icon: LayoutDashboard },
+    { path: "/app/study", label: "Deep Work", icon: Zap, badge: "Hoje" },
+    { path: "/app/analytics", label: "Analytics", icon: BarChart2 },
+    { path: "/app/schedule", label: "Cronograma", icon: CalendarDays },
   ];
 
   const pageMeta = useMemo(() => {
-    if (location.pathname.startsWith("/study")) {
+    if (location.pathname.startsWith("/app/study")) {
       return {
         title: "Deep Work",
         description: "Sessao focada com acompanhamento do seu ritmo cognitivo.",
       };
     }
-    if (location.pathname.startsWith("/analytics")) {
+    if (location.pathname.startsWith("/app/analytics")) {
       return {
         title: "Analytics",
         description: "Metricas de evolucao, retencao e desempenho por materia.",
       };
     }
-    if (location.pathname.startsWith("/schedule")) {
+    if (location.pathname.startsWith("/app/schedule")) {
       return {
         title: "Cronograma",
         description: "Planejamento semanal com prioridades e replanejamento inteligente.",
       };
     }
-    if (location.pathname.startsWith("/onboarding-v1")) {
+    if (location.pathname.startsWith("/app/onboarding-v1")) {
       return {
         title: "Onboarding v1",
         description: "Defina sua rotina semanal para calcular capacidade e blocos de estudo.",
       };
     }
-    if (location.pathname.startsWith("/onboarding")) {
+    if (location.pathname.startsWith("/app/onboarding")) {
       return {
         title: "Onboarding",
         description: "Configure sua rotina, escolha o edital e deixe a engine montar seu plano.",
@@ -95,17 +95,17 @@ export function RootLayout() {
     .join("");
 
   const isActive = (path: string) => {
-    if (path === "/") {
-      return location.pathname === "/";
+    if (path === "/app") {
+      return location.pathname === "/app";
     }
     return location.pathname.startsWith(path);
   };
 
   // O onboarding é uma experiência focada: não exibe navegação, menu ou cabeçalho da plataforma.
   if (
-    location.pathname === "/onboarding-v1" ||
-    location.pathname === "/onboarding" ||
-    location.pathname.startsWith("/edital-review/")
+    location.pathname === "/app/onboarding-v1" ||
+    location.pathname === "/app/onboarding" ||
+    location.pathname.startsWith("/app/edital-review/")
   ) {
     return <Outlet />;
   }

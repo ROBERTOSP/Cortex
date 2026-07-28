@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router";
 import { ProtectedRootLayout } from "./components/ProtectedRootLayout";
 import { Login } from "./pages/Login";
+import { Landing } from "./pages/Landing";
 import { Dashboard } from "./pages/Dashboard";
 import { DeepWork } from "./pages/DeepWork";
 import { Analytics } from "./pages/Analytics";
@@ -11,11 +12,15 @@ import { EditalReview } from "./pages/EditalReview";
 
 export const router = createBrowserRouter([
   {
+    path: "/",
+    Component: Landing,
+  },
+  {
     path: "/login",
     Component: Login,
   },
   {
-    path: "/",
+    path: "/app",
     Component: ProtectedRootLayout,
     children: [
       { index: true, Component: Dashboard },

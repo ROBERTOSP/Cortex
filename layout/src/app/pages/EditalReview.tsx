@@ -60,7 +60,7 @@ export function EditalReview() {
         method: "POST",
         body: JSON.stringify({ targetJob: selectedJobName, selectedJob: selectedJobName, subjects }),
       });
-      navigate("/schedule");
+      navigate("/app/schedule");
     } catch (requestError: any) {
       setError(requestError.message || "Não foi possível confirmar o edital.");
     } finally {
@@ -118,7 +118,7 @@ export function EditalReview() {
             {subjects.map((subject, index) => <section key={`${subject.name}-${index}`} className="rounded-2xl border p-4"><div className="flex items-center justify-between gap-3"><input aria-label={`Disciplina ${index + 1}`} className="min-w-0 flex-1 bg-transparent font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary" value={subject.name} onChange={(event) => setSubjects(subjects.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))}/><Button variant="ghost" size="sm" onClick={() => setSubjects(subjects.filter((_, itemIndex) => itemIndex !== index))}>Remover</Button></div><ul className="mt-3 space-y-2 text-sm text-muted-foreground">{subject.topics.map((topic, topicIndex) => <li key={`${topic.name}-${topicIndex}`}><strong className="text-foreground">{topic.name}</strong>{topic.subtopics.length ? `: ${topic.subtopics.join(", ")}` : ""}</li>)}</ul></section>)}
           </div>
         </section>
-        <div className="mt-7 flex flex-wrap justify-between gap-3 border-t pt-5"><Button variant="outline" onClick={() => navigate("/onboarding-v1")}>Voltar</Button><Button onClick={confirm} disabled={saving || subjects.length === 0}>{saving ? "Criando plano…" : "Confirmar edital e criar plano"}</Button></div>
+        <div className="mt-7 flex flex-wrap justify-between gap-3 border-t pt-5"><Button variant="outline" onClick={() => navigate("/app/onboarding-v1")}>Voltar</Button><Button onClick={confirm} disabled={saving || subjects.length === 0}>{saving ? "Criando plano…" : "Confirmar edital e criar plano"}</Button></div>
       </div>
     </main>
   );

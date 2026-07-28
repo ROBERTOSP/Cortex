@@ -333,7 +333,7 @@ export function RoutineOnboardingV1() {
       if (step < 4) setStep(step + 1);
       else {
         await apiFetch("/routine/me/complete", { method: "POST" });
-        navigate("/schedule");
+        navigate("/app/schedule");
       }
     } catch (e: any) {
       setError(e.message || "Não foi possível salvar agora.");
