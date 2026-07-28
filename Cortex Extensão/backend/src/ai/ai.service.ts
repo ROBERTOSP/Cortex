@@ -68,7 +68,7 @@ export class AiService {
 Formato exato:
 {"summary":"resumo simples","board":null,"organization":null,"examDate":null,"jobs":[{"name":"","requirements":[],"vacancies":null,"quotas":[],"pcd":[],"subjects":[{"name":"","topics":[{"name":"","subtopics":[]}]}],"notes":[]}],"notices":[]}
 Regras: examDate em YYYY-MM-DD quando explícita; quotas e pcd devem registrar regras relevantes; subjects deve refletir conteúdo do cargo, incluindo conteúdo comum quando aplicável.
-Texto do edital:\n${text.substring(0, 60000)}`;
+Texto do edital:\n${text.substring(0, 24000)}`;
     try {
       const result = await this.model.generateContent(prompt);
       const jsonText = (await result.response).text().replace(/```json|```/g, '').trim();
