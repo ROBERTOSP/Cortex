@@ -132,6 +132,7 @@ export function RoutineOnboardingV1() {
   const [contestCreated, setContestCreated] = useState(false);
   const [draftContestId, setDraftContestId] = useState<string | null>(null);
   const [processingStep, setProcessingStep] = useState(0);
+  const [uploadPhase, setUploadPhase] = useState<"idle" | "sending" | "analyzing">("idle");
   useEffect(() => {
     if (!saving || step !== 0 || editalMode === "none") { setProcessingStep(0); return; }
     const interval = window.setInterval(() => setProcessingStep((current) => Math.min(current + 1, editalProcessingSteps.length - 1)), 1800);
@@ -259,6 +260,7 @@ export function RoutineOnboardingV1() {
         throw new Error("Selecione o PDF do edital para continuar.");
       const body = new FormData();
       body.set("file", editalFile);
+      setUploadPhase("sending");
       Object.entries(meta).forEach(([key, value]) => {
         if (value) body.set(key, value);
       });
@@ -293,6 +295,7 @@ export function RoutineOnboardingV1() {
     try {
       if (step === 0) {
         const contest = await createContest();
+        if (editalMode !== "none" && !contest) throw new Error("O arquivo não foi enviado. Selecione o edital novamente e tente mais uma vez.");
         if (contest?.status === "DRAFT") {
           navigate(`/edital-review/${contest.id}`);
           return;
@@ -381,7 +384,7 @@ export function RoutineOnboardingV1() {
         {saving && step === 0 && editalMode !== "none" && (
           <>
           <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-5">
-            <div className="flex items-center gap-3"><span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" /><span><strong className="block text-foreground">Analisando seu edital</strong><span className="text-sm text-muted-foreground">Você não precisa fazer nada agora.</span></span></div>
+            <div className="flex items-center gap-3"><span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" /><span><strong className="block text-foreground">{uploadPhase === "sending" ? "Enviando o arquivo ao Cortex" : "Analisando seu edital"}</strong><span className="text-sm text-muted-foreground">{uploadPhase === "sending" ? "O PDF foi selecionado e está sendo enviado." : "Você não precisa fazer nada agora."}</span></span></div>
             <ol className="mt-5 space-y-3">{editalProcessingSteps.map((label, index) => <li key={label} className={`flex items-center gap-3 text-sm transition-opacity ${index <= processingStep ? "text-foreground" : "text-muted-foreground/50"}`}><span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${index < processingStep ? "bg-primary text-primary-foreground" : index === processingStep ? "border-2 border-primary text-primary" : "border bg-background"}`}>{index < processingStep ? "✓" : index === processingStep ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : index + 1}</span><span>{label}{index === processingStep ? <span className="ml-2 animate-pulse text-primary">em andamento…</span> : null}</span></li>)}</ol>
           </div>
           <div className="mt-4 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
