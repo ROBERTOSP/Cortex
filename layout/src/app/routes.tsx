@@ -5,7 +5,9 @@ import { Dashboard } from "./pages/Dashboard";
 import { DeepWork } from "./pages/DeepWork";
 import { Analytics } from "./pages/Analytics";
 import { Schedule } from "./pages/Schedule";
-import { Onboarding } from "./pages/Onboarding";
+import { RoutineOnboardingV1 } from "./pages/RoutineOnboardingV1";
+import { PrivacyRoutine } from "./pages/PrivacyRoutine";
+import { EditalReview } from "./pages/EditalReview";
 
 export const router = createBrowserRouter([
   {
@@ -17,7 +19,10 @@ export const router = createBrowserRouter([
     Component: ProtectedRootLayout,
     children: [
       { index: true, Component: Dashboard },
-      { path: "onboarding", Component: Onboarding },
+      { path: "onboarding", Component: RoutineOnboardingV1 },
+      { path: "onboarding-v1", Component: RoutineOnboardingV1 },
+      { path: "como-usamos-seus-dados", Component: PrivacyRoutine },
+      { path: "edital-review/:contestId", Component: EditalReview },
       { path: "study", Component: DeepWork },
       { path: "analytics", Component: Analytics },
       { path: "schedule", Component: Schedule },

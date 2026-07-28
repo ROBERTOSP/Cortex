@@ -16,8 +16,7 @@ export class AiService {
 
   async structureEdital(text: string) {
     if (!this.model) {
-      console.warn('Gemini API Key não configurada. Usando Mock.');
-      return this.getMockStructure();
+      throw new Error('Serviço de análise de edital não configurado');
     }
 
     try {
@@ -50,7 +49,7 @@ export class AiService {
       return JSON.parse(jsonText);
     } catch (error) {
       console.error('Erro na IA Gemini:', error);
-      return this.getMockStructure();
+      throw new Error('Não foi possível extrair uma estrutura confiável do edital');
     }
   }
 
@@ -105,24 +104,4 @@ export class AiService {
     return response.text().trim();
   }
 
-  private getMockStructure() {
-    return {
-      subjects: [
-        {
-          name: "Direito Constitucional",
-          topics: [
-            { name: "Direitos e Garantias Fundamentais", subtopics: ["Direitos Individuais", "Direitos Sociais"] },
-            { name: "Organização do Estado", subtopics: ["Administração Pública"] }
-          ]
-        },
-        {
-          name: "Língua Portuguesa",
-          topics: [
-            { name: "Compreensão de Texto", subtopics: [] },
-            { name: "Gramática", subtopics: ["Sintaxe", "Morfologia"] }
-          ]
-        }
-      ]
-    };
-  }
 }

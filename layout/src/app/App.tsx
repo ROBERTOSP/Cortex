@@ -7,7 +7,12 @@ import { useAuth } from "./auth/AuthContext";
 
 export default function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem={false}
+      storageKey="cortex_theme"
+    >
       <AuthProvider>
         <Bootstrap />
         <div className="font-[family-name:var(--font-inter)]">

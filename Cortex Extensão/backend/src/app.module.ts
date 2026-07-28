@@ -10,6 +10,7 @@ import { DatabaseModule } from './database/database.module';
 import { AiModule } from './ai/ai.module';
 import { ScraperModule } from './scraper/scraper.module';
 import { QuestionsModule } from './questions/questions.module';
+import { RoutineModule } from './routine/routine.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { QuestionsModule } from './questions/questions.module';
     AiModule,
     ScraperModule,
     QuestionsModule,
+    RoutineModule,
   ],
   controllers: [AppController],
   providers: [AppService],

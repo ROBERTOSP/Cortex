@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 const pdf = require('pdf-parse');
 import { DatabaseService } from '../database/database.service';
 import { AiService } from '../ai/ai.service';
+import { normalizeTaxonomyKey } from '../questions/taxonomy-aliases';
 
 type StructuredSubject = {
   name: string;
@@ -10,6 +11,8 @@ type StructuredSubject = {
     subtopics: string[];
   }>;
 };
+
+type EditalSource = 'CATALOG' | 'TEXT' | 'PDF' | 'LINK';
 
 type CatalogContest = {
   id: string;
@@ -155,6 +158,8 @@ export class ContestsService {
       examDate?: string;
       templateId?: string;
       editalText?: string;
+      editalSource?: EditalSource;
+      editalSourceUrl?: string;
     },
   ) {
     const name = (data.name || '').trim();
@@ -180,6 +185,8 @@ export class ContestsService {
     const resolvedBoard = board || template?.board || 'Banca não informada';
     const resolvedExamDate = data.examDate || template?.examDate || null;
 
+    const source = data.editalSource || (editalText ? 'TEXT' : template ? 'CATALOG' : undefined);
+    const needsReview = Boolean(editalText) && source !== 'CATALOG';
     const contest = await this.database.contest.create({
       data: {
         userId,
@@ -187,10 +194,18 @@ export class ContestsService {
         targetJob,
         board: resolvedBoard,
         examDate: resolvedExamDate ? new Date(resolvedExamDate) : null,
+        status: needsReview ? 'DRAFT' : 'ACTIVE',
+        editalSource: source,
+        editalSourceUrl: data.editalSourceUrl || null,
+        editalDraft: needsReview ? structure : undefined,
+        editalExtractedAt: needsReview ? new Date() : null,
+        editalConfirmedAt: needsReview ? null : new Date(),
       },
     });
 
-    await this.createKnowledgeTree(contest.id, structure.subjects || []);
+    if (!needsReview) {
+      await this.createKnowledgeTree(contest.id, structure.subjects || []);
+    }
 
     return this.findOneForUser(userId, contest.id);
   }
@@ -198,7 +213,7 @@ export class ContestsService {
   async parseAndCreateFromEdital(
     file: Express.Multer.File,
     userId: string,
-    meta?: { name?: string; targetJob?: string; board?: string; examDate?: string },
+    meta?: { name?: string; targetJob?: string; board?: string; examDate?: string; sourceUrl?: string },
   ) {
     if (!file) {
       throw new BadRequestException('Arquivo não enviado');
@@ -214,10 +229,66 @@ export class ContestsService {
         board: meta?.board,
         examDate: meta?.examDate,
         editalText: text,
+        editalSource: meta?.sourceUrl ? 'LINK' : 'PDF',
+        editalSourceUrl: meta?.sourceUrl,
       });
     } catch (error) {
       console.error('Erro ao processar edital:', error);
       throw new BadRequestException('Falha ao processar o edital');
+    }
+  }
+
+  async parseAndCreateFromEditalLink(
+    url: string | undefined,
+    userId: string,
+    meta?: { name?: string; targetJob?: string; board?: string; examDate?: string; sourceUrl?: string },
+  ) {
+    const source = (url || '').trim();
+    if (!source) {
+      throw new BadRequestException('Informe o link direto do PDF do edital');
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(source);
+    } catch {
+      throw new BadRequestException('Informe um link vÃ¡lido');
+    }
+
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      throw new BadRequestException('O link deve usar http ou https');
+    }
+    if (this.isPrivateHost(parsed.hostname)) {
+      throw new BadRequestException('O link informado nÃ£o Ã© permitido');
+    }
+
+    try {
+      const response = await fetch(parsed, {
+        redirect: 'error',
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const contentType = response.headers.get('content-type') || '';
+      const bytes = Buffer.from(await response.arrayBuffer());
+      const isPdf = contentType.includes('pdf') || bytes.subarray(0, 4).toString() === '%PDF';
+      if (!isPdf) {
+        throw new BadRequestException('O link precisa apontar diretamente para um arquivo PDF');
+      }
+      if (bytes.length === 0 || bytes.length > 20 * 1024 * 1024) {
+        throw new BadRequestException('O PDF deve ter no mÃ¡ximo 20 MB');
+      }
+
+      return this.parseAndCreateFromEdital(
+        { buffer: bytes } as Express.Multer.File,
+        userId,
+        { ...meta, sourceUrl: source },
+      );
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException('NÃ£o foi possÃ­vel baixar ou processar este edital');
     }
   }
 
@@ -242,6 +313,119 @@ export class ContestsService {
     }
 
     return contest;
+  }
+
+  async getEditalReviewForUser(userId: string, contestId: string) {
+    const contest = await this.database.contest.findFirst({
+      where: { id: contestId, userId },
+      select: {
+        id: true, name: true, targetJob: true, board: true, examDate: true, status: true,
+        editalSource: true, editalSourceUrl: true, editalDraft: true, editalExtractedAt: true,
+      },
+    });
+    if (!contest) throw new NotFoundException('Concurso não encontrado');
+    if (contest.status !== 'DRAFT') throw new BadRequestException('Este edital não está aguardando revisão');
+    return contest;
+  }
+
+  async confirmEditalForUser(
+    userId: string,
+    contestId: string,
+    data: { name?: string; targetJob?: string; board?: string; examDate?: string; subjects?: unknown },
+  ) {
+    const contest = await this.database.contest.findFirst({ where: { id: contestId, userId } });
+    if (!contest) throw new NotFoundException('Concurso não encontrado');
+    if (contest.status !== 'DRAFT') throw new BadRequestException('Este edital não está aguardando confirmação');
+
+    const draft = this.normalizeStructure(data.subjects ?? contest.editalDraft);
+    if (draft.subjects.length === 0) {
+      throw new BadRequestException('Confirme ao menos uma disciplina antes de criar a rotina');
+    }
+
+    await this.database.knowledgeNode.deleteMany({ where: { contestId } });
+    await this.createKnowledgeTree(contestId, draft.subjects);
+    await this.resolveTaxonomyForContest(contestId);
+    await this.database.contest.update({
+      where: { id: contestId },
+      data: {
+        name: (data.name || contest.name).trim(),
+        targetJob: (data.targetJob || contest.targetJob).trim(),
+        board: (data.board || contest.board).trim(),
+        examDate: data.examDate ? new Date(data.examDate) : contest.examDate,
+        status: 'ACTIVE',
+        editalDraft: draft,
+        editalConfirmedAt: new Date(),
+      },
+    });
+    return this.findOneForUser(userId, contestId);
+  }
+
+  private normalizeStructure(value: unknown): { subjects: StructuredSubject[] } {
+    const source = value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as { subjects?: unknown }).subjects
+      : value;
+    if (!Array.isArray(source)) return { subjects: [] };
+    return {
+      subjects: source
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+        .map((subject) => ({
+          name: String(subject.name || '').trim(),
+          topics: Array.isArray(subject.topics)
+            ? subject.topics
+                .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+                .map((topic) => ({
+                  name: String(topic.name || '').trim(),
+                  subtopics: Array.isArray(topic.subtopics)
+                    ? topic.subtopics.map((item) => String(item).trim()).filter(Boolean)
+                    : [],
+                }))
+                .filter((topic) => topic.name)
+            : [],
+        }))
+        .filter((subject) => subject.name),
+    };
+  }
+
+  private async resolveTaxonomyForContest(contestId: string) {
+    const nodes = await this.database.knowledgeNode.findMany({
+      where: { contestId },
+      select: { id: true, parentId: true, name: true, type: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    const matchedTaxonomyByNode = new Map<string, string>();
+
+    for (const node of nodes) {
+      const key = normalizeTaxonomyKey(node.name);
+      const parentTaxonomyId = node.parentId ? matchedTaxonomyByNode.get(node.parentId) : undefined;
+      let candidates: Array<{ id: string; name: string }> = [];
+      if (node.type === 'SUBJECT') {
+        candidates = await this.database.questionSubject.findMany({
+          where: { OR: [{ canonicalKey: key }, { name: { equals: node.name, mode: 'insensitive' } }] },
+          select: { id: true, name: true }, take: 3,
+        });
+      } else if (node.type === 'TOPIC' && parentTaxonomyId) {
+        candidates = await this.database.questionTopic.findMany({
+          where: { subjectId: parentTaxonomyId, OR: [{ canonicalKey: key }, { name: { equals: node.name, mode: 'insensitive' } }] },
+          select: { id: true, name: true }, take: 3,
+        });
+      } else if (node.type === 'SUBTOPIC' && parentTaxonomyId) {
+        candidates = await this.database.questionSubtopic.findMany({
+          where: { topicId: parentTaxonomyId, OR: [{ canonicalKey: key }, { name: { equals: node.name, mode: 'insensitive' } }] },
+          select: { id: true, name: true }, take: 3,
+        });
+      }
+
+      const status = candidates.length === 1 ? 'MATCHED' : candidates.length > 1 ? 'AMBIGUOUS' : 'UNMATCHED';
+      if (status === 'MATCHED') matchedTaxonomyByNode.set(node.id, candidates[0].id);
+      await this.database.knowledgeNode.update({
+        where: { id: node.id },
+        data: {
+          taxonomyStatus: status,
+          taxonomyMatch: { canonicalKey: key, candidates },
+          taxonomyMatchedAt: new Date(),
+        },
+      });
+    }
   }
 
   private async createKnowledgeTree(contestId: string, subjects: StructuredSubject[]) {
@@ -276,5 +460,21 @@ export class ContestsService {
         }
       }
     }
+  }
+
+  private isPrivateHost(hostname: string) {
+    const host = hostname.toLowerCase();
+    if (host === 'localhost' || host.endsWith('.local')) return true;
+    if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) return false;
+    const octets = host.split('.').map(Number);
+    return (
+      octets.some((part) => part > 255) ||
+      octets[0] === 10 ||
+      octets[0] === 127 ||
+      (octets[0] === 169 && octets[1] === 254) ||
+      (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+      (octets[0] === 192 && octets[1] === 168) ||
+      octets[0] === 0
+    );
   }
 }

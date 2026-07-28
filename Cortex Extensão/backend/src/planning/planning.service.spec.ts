@@ -12,11 +12,19 @@ describe('PlanningService', () => {
     questionSubject: {
       findMany: jest.fn(),
     },
+    userRoutine: {
+      findUnique: jest.fn(),
+    },
+    contest: {
+      findFirst: jest.fn(),
+    },
   };
 
   beforeEach(() => {
     jest.resetAllMocks();
     jest.useFakeTimers().setSystemTime(new Date('2026-07-26T10:00:00Z'));
+    database.userRoutine.findUnique.mockResolvedValue(null);
+    database.contest.findFirst.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -150,5 +158,30 @@ describe('PlanningService', () => {
     );
     expect(result.schedule[0].startsAt).toBe('06:30');
     expect(result.insights).toHaveLength(4);
+  });
+
+  it('usa a capacidade e os horários reais da rotina quando ela existe', async () => {
+    database.user.findUnique.mockResolvedValue({
+      id: 'u1', dailyStudyHours: 2, peakEnergyTime: 'MANHA', fatigueLevel: 'MEDIO', works: false,
+    });
+    database.questionAttempt.findMany.mockResolvedValue([]);
+    database.questionSubject.findMany.mockResolvedValue([]);
+    database.contest.findFirst.mockResolvedValue({
+      nodes: [{ name: 'Direito Penal', children: [{ name: 'Teoria do Crime' }] }],
+    });
+    database.userRoutine.findUnique.mockResolvedValue({
+      timezone: 'America/Sao_Paulo', planMode: 'FLEXIBLE', preferredSessionMinutes: 40,
+      maxSubjectsPerDay: 3, badDayMinimumMinutes: 20, missedDayStrategy: 'REDISTRIBUTE',
+      peakEnergyPeriod: 'MORNING', commitments: [],
+      availabilityWindows: [{ dayOfWeek: 'SUN', startMinute: 480, endMinute: 600, flexibility: 'FIXED', context: 'HOME', devices: ['COMPUTER'], allowedActivities: ['STUDY'] }],
+    });
+
+    const service = new PlanningService(database);
+    const result = await service.generateScheduleForUser('u1', {});
+
+    expect(result.insights[0]).toMatchObject({ subject: 'Direito Penal', topic: 'Teoria do Crime' });
+    expect(result.schedule).toHaveLength(3);
+    expect(result.schedule.every((task: any) => task.startsAt >= '08:00' && task.startsAt < '10:00')).toBe(true);
+    expect(result.schedule.every((task: any) => task.duration === 40)).toBe(true);
   });
 });

@@ -61,6 +61,21 @@ export class ContestsController {
     });
   }
 
+  @Post('import-edital-link')
+  async importEditalLink(@Req() req, @Body() body: Record<string, string>) {
+    const userId = String(req.user?.sub || '');
+    if (!userId) {
+      throw new UnauthorizedException();
+    }
+
+    return this.contestsService.parseAndCreateFromEditalLink(body.url, userId, {
+      name: body.name,
+      targetJob: body.targetJob,
+      board: body.board,
+      examDate: body.examDate,
+    });
+  }
+
   @Get()
   findAll(@Req() req) {
     const userId = String(req.user?.sub || '');
@@ -77,5 +92,25 @@ export class ContestsController {
       throw new UnauthorizedException();
     }
     return this.contestsService.findOneForUser(userId, contestId);
+  }
+
+  @Get(':contestId/edital-review')
+  getEditalReview(@Req() req, @Param('contestId') contestId: string) {
+    const userId = String(req.user?.sub || '');
+    if (!userId) throw new UnauthorizedException();
+    return this.contestsService.getEditalReviewForUser(userId, contestId);
+  }
+
+  @Post(':contestId/confirm-edital')
+  confirmEdital(@Req() req, @Param('contestId') contestId: string, @Body() body: Record<string, unknown>) {
+    const userId = String(req.user?.sub || '');
+    if (!userId) throw new UnauthorizedException();
+    return this.contestsService.confirmEditalForUser(userId, contestId, {
+      name: typeof body.name === 'string' ? body.name : undefined,
+      targetJob: typeof body.targetJob === 'string' ? body.targetJob : undefined,
+      board: typeof body.board === 'string' ? body.board : undefined,
+      examDate: typeof body.examDate === 'string' ? body.examDate : undefined,
+      subjects: body.subjects,
+    });
   }
 }

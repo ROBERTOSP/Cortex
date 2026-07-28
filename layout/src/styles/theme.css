@@ -4,7 +4,7 @@
   --font-size: 16px;
   --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-serif: 'PT Serif', Georgia, serif;
-  --background: #ffffff;
+  --background: #fafafa;
   --foreground: #000000;
   --card: #ffffff;
   --card-foreground: #000000;
@@ -41,6 +41,30 @@
   --sidebar-accent-foreground: #000000;
   --sidebar-border: #e5e5e5;
   --sidebar-ring: #000000;
+}
+
+/* Garante que os textos auxiliares do onboarding permaneçam legíveis no tema claro. */
+.onboarding-light .text-slate-300,
+.onboarding-light .text-cyan-200 {
+  color: var(--muted-foreground) !important;
+}
+
+.onboarding-light .text-white {
+  color: var(--foreground) !important;
+}
+
+.onboarding-light {
+  --background: #ffffff;
+  --foreground: #101827;
+  --card: #ffffff;
+  --card-foreground: #101827;
+  --popover: #ffffff;
+  --popover-foreground: #101827;
+  --muted: #f4f6f8;
+  --muted-foreground: #5e6878;
+  --border: #dfe4ea;
+  --input: #ffffff;
+  --input-background: #ffffff;
 }
 
 .dark {

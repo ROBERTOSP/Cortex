@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { resolveBoardAlias } from './taxonomy-aliases';
 
 export type RawQuestionOption = {
   letra?: string;
@@ -54,6 +55,8 @@ export type NormalizedQuestion = {
   year: number | null;
   exam: string | null;
   boardName: string | null;
+  sourceBoardName: string | null;
+  canonicalBoardId: string | null;
   subjectName: string | null;
   topicName: string | null;
   subtopicName: string | null;
@@ -160,6 +163,8 @@ export function normalizeImportedQuestion(raw: RawQuestion): NormalizedQuestion 
     throw new Error(`Questao ${cortexId} sem enunciado`);
   }
 
+  const sourceBoardName = nullableText(raw.banca);
+  const boardAlias = resolveBoardAlias(sourceBoardName);
   const normalized: NormalizedQuestion = {
     cortexIdNum,
     cortexId,
@@ -173,7 +178,9 @@ export function normalizeImportedQuestion(raw: RawQuestion): NormalizedQuestion 
     outdated: Boolean(raw.desatualizada),
     year,
     exam: nullableText(raw.prova),
-    boardName: nullableText(raw.banca),
+    boardName: boardAlias.canonical?.name || sourceBoardName,
+    sourceBoardName,
+    canonicalBoardId: boardAlias.canonical?.id || null,
     subjectName: nullableText(raw.materia),
     topicName: nullableText(raw.topico),
     subtopicName: nullableText(raw.subtopico),
@@ -196,6 +203,13 @@ export function normalizeImportedQuestion(raw: RawQuestion): NormalizedQuestion 
     if (Array.isArray(value) && value.length > 0) {
       rawJson[key] = value;
     }
+  }
+  if (sourceBoardName) {
+    rawJson.source_taxonomy = {
+      board_name: sourceBoardName,
+      canonical_board_id: boardAlias.canonical?.id || null,
+      canonical_board_name: boardAlias.canonical?.name || null,
+    };
   }
   normalized.rawJson = Object.keys(rawJson).length > 0 ? rawJson : null;
 

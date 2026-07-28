@@ -14,6 +14,34 @@ export class AuthService {
     this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
   }
 
+  async devLogin(payload: { email: string; name?: string | null }) {
+    const email = (payload.email || '').trim().toLowerCase();
+    if (!email) {
+      throw new UnauthorizedException('Invalid dev login');
+    }
+
+    const user = await this.database.user.upsert({
+      where: { email },
+      update: {
+        name: payload.name ?? undefined,
+      },
+      create: {
+        email,
+        name: payload.name ?? undefined,
+      },
+    });
+
+    const jwtToken = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+    });
+
+    return {
+      user,
+      token: jwtToken,
+    };
+  }
+
   async validateGoogleToken(token: string) {
     try {
       let email: string;

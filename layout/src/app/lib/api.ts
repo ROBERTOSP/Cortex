@@ -22,7 +22,9 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const url = input.startsWith("http") ? input : `${getApiBaseUrl()}${input}`;
   const headers = new Headers(init.headers);
-  headers.set("Content-Type", "application/json");
+  if (!(init.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
 
   const auth = init.auth ?? true;
   if (auth) {

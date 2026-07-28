@@ -13,6 +13,7 @@ type AuthState = {
   token: string | null;
   isReady: boolean;
   loginWithGoogleIdToken: (googleToken: string) => Promise<void>;
+  loginDev: (email?: string) => Promise<void>;
   logout: () => void;
   loadFromStorage: () => Promise<void>;
 };
@@ -76,16 +77,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsReady(true);
   }, []);
 
+  const loginDev = useCallback(async (email?: string) => {
+    const secret = (import.meta.env.VITE_DEV_LOGIN_SECRET || "").trim();
+    const res = await apiFetch<{ user: AuthUser; token: string }>("/auth/dev/login", {
+      method: "POST",
+      auth: false,
+      headers: secret ? { "X-Dev-Login-Secret": secret } : undefined,
+      body: JSON.stringify({ email: email || undefined }),
+    });
+
+    try {
+      localStorage.setItem("cortex_token", res.token);
+      localStorage.setItem("cortex_user", JSON.stringify(res.user));
+    } catch {}
+
+    setUser(res.user);
+    setToken(res.token);
+    setIsReady(true);
+  }, []);
+
   const value = useMemo<AuthState>(
     () => ({
       user,
       token,
       isReady,
       loginWithGoogleIdToken,
+      loginDev,
       logout,
       loadFromStorage,
     }),
-    [isReady, loginWithGoogleIdToken, logout, token, user, loadFromStorage]
+    [isReady, loginWithGoogleIdToken, loginDev, logout, token, user, loadFromStorage]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

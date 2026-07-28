@@ -6,6 +6,109 @@ datasource db {
   provider = "postgresql"
 }
 
+enum StudyGoalType {
+  APPROVAL
+  GENERAL_STUDY
+  CAREER_TRANSITION
+}
+
+enum StudyGoalPhase {
+  PRE_NOTICE
+  POST_NOTICE
+}
+
+enum StudyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum EnergyPeriod {
+  MORNING
+  AFTERNOON
+  EVENING
+  NIGHT
+}
+
+enum FatigueLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum StudyContext {
+  HOME
+  WORK
+  COMMUTE
+  LIBRARY
+  OTHER
+}
+
+enum DeviceType {
+  DESKTOP
+  LAPTOP
+  TABLET
+  PHONE
+  PAPER
+}
+
+enum WindowFlexibility {
+  STRICT
+  FLEXIBLE
+}
+
+enum AllowedActivity {
+  THEORY
+  REVIEW
+  QUESTIONS
+  FLASHCARDS
+  VIDEO
+  AUDIO
+  NOTES
+  SIMULATION
+  ESSAY_PRACTICE
+}
+
+enum CommitmentCategory {
+  WORK
+  COMMUTE
+  COLLEGE
+  FAMILY
+  EXERCISE
+  OTHER
+}
+
+enum PlanMode {
+  RIGID
+  FLEXIBLE
+}
+
+enum MissedDayStrategy {
+  REDISTRIBUTE
+  ASK_BEFORE
+  KEEP_PENDING
+  DROP_LOW_PRIORITY
+}
+
+enum DayOfWeek {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+enum QuestionRightsStatus {
+  PENDING
+  INTERNAL_RESTRICTED
+  AUTHORIZED
+  LICENSED
+  OFFICIAL_SOURCE_REVIEW
+  REMOVED
+}
+
 model User {
   id              String   @id @default(uuid())
   email           String   @unique
@@ -20,6 +123,11 @@ model User {
   fatigueLevel    String?  // Baixo, Médio, Alto
   peakEnergyTime  String?  // Manhã, Tarde, Noite
   works           Boolean  @default(false)
+
+  onboardingVersion Int    @default(0) @map("onboarding_version")
+  studyGoal         StudyGoal?
+  routine           UserRoutine?
+  dailyCheckIns     DailyCheckIn[]
   
   contests        Contest[]
   studySessions   StudySession[]
@@ -31,18 +139,160 @@ model User {
   @@map("users")
 }
 
+model StudyGoal {
+  id              String         @id @default(uuid())
+
+  userId          String         @unique @map("user_id")
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type            StudyGoalType
+  studyLevel      StudyLevel     @map("study_level")
+  phase           StudyGoalPhase
+
+  title           String         @map("title")
+  targetJob       String         @map("target_job")
+  board           String?        @map("board")
+
+  examDate        DateTime?      @map("exam_date")
+  examDateUnknown Boolean        @default(false) @map("exam_date_unknown")
+
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@map("study_goals")
+}
+
+model UserRoutine {
+  id                          String            @id @default(uuid())
+
+  userId                      String            @unique @map("user_id")
+  user                        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  onboardingSchemaVersion     Int               @default(1) @map("onboarding_schema_version")
+
+  timezone                    String?           @map("timezone")
+
+  wakeTimeMinute              Int?              @map("wake_time_minute")
+  sleepTimeMinute             Int?              @map("sleep_time_minute")
+
+  peakEnergyPeriod            EnergyPeriod?     @map("peak_energy_period")
+  habitualFatigueLevel        FatigueLevel?     @map("habitual_fatigue_level")
+
+  preferredSessionMinutes     Int?              @map("preferred_session_minutes")
+  planMode                    PlanMode?         @map("plan_mode")
+  maxSubjectsPerDay           Int?              @map("max_subjects_per_day")
+
+  wantsDayOff                 Boolean           @default(false) @map("wants_day_off")
+  dayOffPreference            DayOfWeek?        @map("day_off_preference")
+
+  badDayMinimumMinutes        Int?              @map("bad_day_minimum_minutes")
+  missedDayStrategy           MissedDayStrategy? @map("missed_day_strategy")
+
+  routineOnboardingCompletedAt DateTime?        @map("routine_onboarding_completed_at")
+
+  availabilityWindows         AvailabilityWindow[]
+  commitments                 RoutineCommitment[]
+  dailyCheckIns               DailyCheckIn[]
+
+  createdAt                   DateTime          @default(now()) @map("created_at")
+  updatedAt                   DateTime          @updatedAt @map("updated_at")
+
+  @@index([timezone])
+  @@map("user_routines")
+}
+
+model AvailabilityWindow {
+  id                String           @id @default(uuid())
+
+  routineId         String           @map("routine_id")
+  routine           UserRoutine      @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  dayOfWeek         DayOfWeek        @map("day_of_week")
+  startMinute       Int              @map("start_minute")
+  endMinute         Int              @map("end_minute")
+
+  context           StudyContext
+  devices           DeviceType[]     @default([]) @map("devices")
+  flexibility       WindowFlexibility
+
+  allowedActivities AllowedActivity[] @default([]) @map("allowed_activities")
+
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  @@unique([routineId, dayOfWeek, startMinute, endMinute])
+  @@index([routineId, dayOfWeek])
+  @@index([routineId, dayOfWeek, startMinute])
+  @@map("availability_windows")
+}
+
+model RoutineCommitment {
+  id          String           @id @default(uuid())
+
+  routineId   String           @map("routine_id")
+  routine     UserRoutine      @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  category    CommitmentCategory
+  dayOfWeek   DayOfWeek        @map("day_of_week")
+  startMinute Int              @map("start_minute")
+  endMinute   Int              @map("end_minute")
+  flexibility WindowFlexibility
+
+  note        String?          @db.VarChar(140)
+
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  @@unique([routineId, dayOfWeek, startMinute, endMinute, category])
+  @@index([routineId, dayOfWeek])
+  @@index([routineId, dayOfWeek, startMinute])
+  @@map("routine_commitments")
+}
+
+model DailyCheckIn {
+  id                      String       @id @default(uuid())
+
+  userId                  String       @map("user_id")
+  user                    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  routineId               String?      @map("routine_id")
+  routine                 UserRoutine? @relation(fields: [routineId], references: [id], onDelete: SetNull)
+
+  dateKey                 String       @map("date_key")
+  timezone                String       @map("timezone")
+
+  energy                  Int
+  focus                   Int
+  fatigue                 Int
+  availableMinutesOverride Int?        @map("available_minutes_override")
+
+  note                    String?      @db.VarChar(200)
+
+  createdAt               DateTime     @default(now()) @map("created_at")
+  updatedAt               DateTime     @updatedAt @map("updated_at")
+
+  @@unique([userId, dateKey])
+  @@map("daily_check_ins")
+}
+
 model Contest {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
   
-  name        String   // Ex: PCDF
-  targetJob   String   // Ex: Agente
-  board       String   // Ex: Cebraspe
-  examDate    DateTime?
-  status      String   @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
+  name            String   // Ex: PCDF
+  targetJob       String   // Ex: Agente
+  board           String   // Ex: Cebraspe
+  examDate        DateTime?
+  status          String   @default("ACTIVE") // DRAFT, ACTIVE, COMPLETED, ARCHIVED
+  editalSource    String?  @map("edital_source") // CATALOG, TEXT, PDF, LINK
+  editalSourceUrl String?  @map("edital_source_url")
+  editalDraft     Json?    @map("edital_draft")
+  editalExtractedAt DateTime? @map("edital_extracted_at")
+  editalConfirmedAt DateTime? @map("edital_confirmed_at")
   
-  nodes       KnowledgeNode[]
+  nodes           KnowledgeNode[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -66,6 +316,9 @@ model KnowledgeNode {
   mastery     Float    @default(0) // 0-100
   retention   Float    @default(0) // 0-100
   difficulty  Float    @default(0) // 0-100 (Percebida pelo usuário)
+  taxonomyStatus String @default("PENDING") @map("taxonomy_status") // PENDING, MATCHED, AMBIGUOUS, UNMATCHED
+  taxonomyMatch  Json?  @map("taxonomy_match")
+  taxonomyMatchedAt DateTime? @map("taxonomy_matched_at")
   
   notes       Note[]
   flashcards  Flashcard[]
@@ -143,6 +396,7 @@ model Question {
 
   options               QuestionOption[]
   attempts              QuestionAttempt[]
+  provenance            QuestionProvenance?
 
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
@@ -173,32 +427,61 @@ model QuestionOption {
   @@map("question_options")
 }
 
+model QuestionProvenance {
+  id                    String               @id @default(uuid())
+  questionId            String               @unique @map("question_id")
+  question              Question             @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  sourceSystem          String               @map("source_system")
+  sourceRecordId        String?              @map("source_record_id")
+  sourceFile            String?              @map("source_file")
+  sourceUrl             String?              @map("source_url")
+  primarySourceUrl      String?              @map("primary_source_url")
+  provenanceConfidence  String               @default("UNVERIFIED") @map("provenance_confidence")
+  rightsStatus          QuestionRightsStatus @default(PENDING) @map("rights_status")
+  rightsBasis           String?              @db.Text @map("rights_basis")
+  reviewedAt            DateTime?            @map("reviewed_at")
+  reviewedBy            String?              @map("reviewed_by")
+
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+
+  @@index([rightsStatus])
+  @@index([sourceSystem])
+  @@map("question_provenance")
+}
+
 model QuestionBoard {
   id        String     @id @default(uuid())
   name      String     @unique
+  canonicalKey String? @map("canonical_key")
   questions Question[]
 
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
+  @@index([canonicalKey])
   @@map("question_boards")
 }
 
 model QuestionSubject {
   id        String          @id @default(uuid())
   name      String          @unique
+  canonicalKey String?      @map("canonical_key")
   questions Question[]
   topics    QuestionTopic[]
 
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
+  @@index([canonicalKey])
   @@map("question_subjects")
 }
 
 model QuestionTopic {
   id         String             @id @default(uuid())
   name       String
+  canonicalKey String?      @map("canonical_key")
   subjectId  String?            @map("subject_id")
   subject    QuestionSubject?   @relation(fields: [subjectId], references: [id])
   questions  Question[]
@@ -208,6 +491,7 @@ model QuestionTopic {
   updatedAt  DateTime           @updatedAt
 
   @@unique([name, subjectId])
+  @@index([canonicalKey, subjectId])
   @@index([subjectId])
   @@map("question_topics")
 }
@@ -215,6 +499,7 @@ model QuestionTopic {
 model QuestionSubtopic {
   id         String          @id @default(uuid())
   name       String
+  canonicalKey String?      @map("canonical_key")
   topicId    String?         @map("topic_id")
   topic      QuestionTopic?  @relation(fields: [topicId], references: [id])
   questions  Question[]
@@ -223,6 +508,7 @@ model QuestionSubtopic {
   updatedAt  DateTime        @updatedAt
 
   @@unique([name, topicId])
+  @@index([canonicalKey, topicId])
   @@index([topicId])
   @@map("question_subtopics")
 }

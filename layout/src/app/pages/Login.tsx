@@ -9,7 +9,7 @@ import { useAuth } from "../auth/AuthContext";
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { token, isReady, loginWithGoogleIdToken } = useAuth();
+  const { token, isReady, loginWithGoogleIdToken, loginDev } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +95,24 @@ export function Login() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError("Login por e-mail ainda não está disponível.");
+  };
+
+  const devLoginEnabled =
+    import.meta.env.DEV && String(import.meta.env.VITE_DEV_LOGIN_ENABLED || "").trim() === "1";
+
+  const handleDevLogin = async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await loginDev();
+      navigate(fromPath, { replace: true });
+    } catch (e) {
+      const msg =
+        e && typeof e === "object" && "message" in e ? String((e as any).message) : "Falha no login.";
+      setError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isReady && token) {
@@ -189,6 +207,15 @@ export function Login() {
             {error ? (
               <div className="mb-4 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 {error}
+              </div>
+            ) : null}
+
+            {devLoginEnabled ? (
+              <div className="rounded-2xl border border-border bg-background px-4 py-3 text-sm flex items-center justify-between gap-3 mb-6">
+                <div className="text-muted-foreground">Modo desenvolvimento</div>
+                <Button variant="secondary" onClick={handleDevLogin} disabled={isSubmitting}>
+                  Entrar (dev)
+                </Button>
               </div>
             ) : null}
 

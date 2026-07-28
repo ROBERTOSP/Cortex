@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   BookOpen,
@@ -17,10 +18,30 @@ import { Badge } from "../components/ui/badge";
 import { Progress } from "../components/ui/progress";
 import { Separator } from "../components/ui/separator";
 import { useAuth } from "../auth/AuthContext";
+import { apiFetch } from "../lib/api";
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [routineV1Completed, setRoutineV1Completed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const state = await apiFetch<any>("/routine/me/state");
+        if (cancelled) return;
+        setRoutineV1Completed(Boolean(state?.isOnboardingV1Completed));
+      } catch {
+        if (cancelled) return;
+        setRoutineV1Completed(null);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const todayTasks = [
     {
@@ -137,6 +158,23 @@ export function Dashboard() {
           Iniciar sessao
         </Button>
       </div>
+
+      {routineV1Completed === false ? (
+        <div className="bg-card rounded-3xl border border-border p-5 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <div className="text-sm font-medium mb-1">
+              Finalize o onboarding v1 da rotina semanal
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Isso destrava a capacidade semanal calculada no backend (blocos por intervalo,
+              compromissos e check-in como teto).
+            </div>
+          </div>
+          <Button className="gap-2" onClick={() => navigate("/onboarding-v1")}>
+            Continuar onboarding v1
+          </Button>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-card rounded-3xl border border-border p-6">

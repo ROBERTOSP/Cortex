@@ -1,0 +1,385 @@
+{
+  "generatedAt": "2026-07-28T12:01:00.932Z",
+  "boards": [
+    {
+      "id": "cebraspe",
+      "name": "Cebraspe",
+      "validQuestions": 139143,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.61,
+      "topSubjects": [
+        "Tecnologia da Informação",
+        "Direito Administrativo",
+        "Medicina"
+      ],
+      "topTopics": [
+        "Língua Portuguesa › Interpretação de Texto › Interpretação de Texto",
+        "Língua Inglesa › Língua Inglesa - Compreensão e Interpretação de Texto › Língua Inglesa - Compreensão e Interpretação de Texto",
+        "Medicina › Clínica Geral › Clínica Geral",
+        "Tecnologia da Informação › Engenharia de Software › Engenharia de Software",
+        "Tecnologia da Informação › Segurança da Informação › Segurança da Informação"
+      ]
+    },
+    {
+      "id": "vunesp",
+      "name": "Vunesp",
+      "validQuestions": 107149,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.86,
+      "topSubjects": [
+        "Matemática",
+        "Língua Portuguesa",
+        "Pedagogia"
+      ],
+      "topTopics": [
+        "Pedagogia › Temas Educacionais Pedagógicos › Temas Educacionais Pedagógicos",
+        "Língua Portuguesa › Interpretação de Texto › Interpretação de Texto",
+        "Matemática › Geral › Geral",
+        "Direito Sanitário e Saúde › Geral › Geral",
+        "Pedagogia › Autores filosóficos, psicológicos, históricos e sociológicos da educação › Autores filosóficos, psicológicos, históricos e sociológicos da educação"
+      ]
+    },
+    {
+      "id": "fundatec",
+      "name": "Fundatec",
+      "validQuestions": 103116,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.76,
+      "topSubjects": [
+        "Legislação Estadual, Distrital e Municipal",
+        "Pedagogia",
+        "Língua Portuguesa"
+      ],
+      "topTopics": [
+        "Legislação Estadual, Distrital e Municipal › Rio Grande do Sul - RS › Rio Grande do Sul - RS",
+        "Pedagogia › Temas Educacionais Pedagógicos › Temas Educacionais Pedagógicos",
+        "Matemática › Geral › Geral",
+        "Legislação Estadual, Distrital e Municipal › Legislação Municipal › Legislação Municipal",
+        "Atualidades e Conhecimentos Gerais › Rio Grande do Sul › Rio Grande do Sul"
+      ]
+    },
+    {
+      "id": "fgv",
+      "name": "FGV",
+      "validQuestions": 87693,
+      "confidence": "ALTA",
+      "averageDifficulty": 3.03,
+      "topSubjects": [
+        "Tecnologia da Informação",
+        "Língua Portuguesa",
+        "Direito Constitucional"
+      ],
+      "topTopics": [
+        "Língua Portuguesa › Interpretação de Texto › Interpretação de Texto",
+        "Língua Inglesa › Língua Inglesa - Compreensão e Interpretação de Texto › Língua Inglesa - Compreensão e Interpretação de Texto",
+        "Direito Sanitário e Saúde › Geral › Geral",
+        "Matemática › Geral › Geral",
+        "Línguas (Outras) › Libras › Libras"
+      ]
+    },
+    {
+      "id": "quadrix",
+      "name": "Instituto Quadrix",
+      "validQuestions": 76443,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.45,
+      "topSubjects": [
+        "Direito Administrativo",
+        "Administração Geral",
+        "Tecnologia da Informação"
+      ],
+      "topTopics": [
+        "Língua Portuguesa › Interpretação de Texto › Interpretação de Texto",
+        "Matemática › Geral › Geral",
+        "Atualidades e Conhecimentos Gerais › Política Internacional / Relação entre Países › Política Internacional / Relação entre Países",
+        "Língua Inglesa › Língua Inglesa - Compreensão e Interpretação de Texto › Língua Inglesa - Compreensão e Interpretação de Texto",
+        "Direito Administrativo › Processo Administrativo - Lei 9.784/99 › Processo Administrativo - Lei 9.784/99"
+      ]
+    },
+    {
+      "id": "avanca_sp",
+      "name": "Instituto Avança SP",
+      "validQuestions": 48123,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.39,
+      "topSubjects": [
+        "Matemática",
+        "Pedagogia",
+        "Língua Portuguesa"
+      ],
+      "topTopics": [
+        "Matemática › Geral › Geral",
+        "Direito Sanitário e Saúde › Geral › Geral",
+        "Farmácia › Geral › Geral",
+        "Odontologia › Geral › Geral",
+        "Fonoaudiologia › Geral › Geral"
+      ]
+    },
+    {
+      "id": "objetiva",
+      "name": "Objetiva Concursos",
+      "validQuestions": 47188,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.49,
+      "topSubjects": [
+        "Legislação Estadual, Distrital e Municipal",
+        "Matemática",
+        "Direito Sanitário e Saúde"
+      ],
+      "topTopics": [
+        "Legislação Estadual, Distrital e Municipal › Rio Grande do Sul - RS › Rio Grande do Sul - RS",
+        "Direito Sanitário e Saúde › Geral › Geral",
+        "Matemática › Geral › Geral",
+        "Pedagogia › Autores filosóficos, psicológicos, históricos e sociológicos da educação › Autores filosóficos, psicológicos, históricos e sociológicos da educação",
+        "Legislação Estadual, Distrital e Municipal › Geral › Geral"
+      ]
+    },
+    {
+      "id": "fepese",
+      "name": "FEPESE",
+      "validQuestions": 46908,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.67,
+      "topSubjects": [
+        "Pedagogia",
+        "Conhecimentos Específicos de um determinado Cargo/Área",
+        "Legislação Estadual, Distrital e Municipal"
+      ],
+      "topTopics": [
+        "Pedagogia › Temas Educacionais Pedagógicos › Temas Educacionais Pedagógicos",
+        "Línguas (Outras) › Libras › Libras",
+        "Legislação Estadual, Distrital e Municipal › Santa Catarina - SC › Santa Catarina - SC",
+        "Língua Inglesa › Língua Inglesa - Compreensão e Interpretação de Texto › Língua Inglesa - Compreensão e Interpretação de Texto",
+        "Direito Sanitário e Saúde › Geral › Geral"
+      ]
+    },
+    {
+      "id": "ameosc",
+      "name": "AMEOSC",
+      "validQuestions": 46176,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.39,
+      "topSubjects": [
+        "Pedagogia",
+        "Conhecimentos Específicos de um determinado Cargo/Área",
+        "Língua Portuguesa"
+      ],
+      "topTopics": [
+        "Pedagogia › Temas Educacionais Pedagógicos › Temas Educacionais Pedagógicos",
+        "Atualidades e Conhecimentos Gerais › Santa Catarina › Santa Catarina",
+        "Legislação Estadual, Distrital e Municipal › Santa Catarina - SC › Santa Catarina - SC",
+        "Direito Sanitário e Saúde › Geral › Geral",
+        "Conhecimentos Específicos de um determinado Cargo/Área › Operador de Máquinas › Operador de Máquinas"
+      ]
+    },
+    {
+      "id": "aocp",
+      "name": "Instituto AOCP",
+      "validQuestions": 42534,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.76,
+      "topSubjects": [
+        "Tecnologia da Informação",
+        "Língua Portuguesa",
+        "Medicina"
+      ],
+      "topTopics": [
+        "Língua Portuguesa › Interpretação de Texto › Interpretação de Texto",
+        "Direito Sanitário e Saúde › Geral › Geral",
+        "Conhecimentos Específicos de um determinado Cargo/Área › Técnico/Tecnólogo/Tecnologista/Auxiliar/Assistente › Técnico/Tecnólogo/Tecnologista/Auxiliar/Assistente",
+        "Tecnologia da Informação › Redes de Computadores › Redes de Computadores",
+        "Pedagogia › Temas Educacionais Pedagógicos › Temas Educacionais Pedagógicos"
+      ]
+    },
+    {
+      "id": "consulplan",
+      "name": "Instituto Consulplan",
+      "validQuestions": 38656,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.92,
+      "topSubjects": [
+        "Língua Portuguesa",
+        "Legislação Estadual, Distrital e Municipal",
+        "Direito Administrativo"
+      ],
+      "topTopics": [
+        "Legislação Estadual, Distrital e Municipal › Minas Gerais - MG › Minas Gerais - MG",
+        "Matemática › Geral › Geral",
+        "Pedagogia › Temas Educacionais Pedagógicos › Temas Educacionais Pedagógicos",
+        "Língua Portuguesa › Interpretação de Texto › Interpretação de Texto",
+        "Língua Portuguesa › Sentidos do texto › Sentidos do texto"
+      ]
+    },
+    {
+      "id": "fcc",
+      "name": "Fundação Carlos Chagas",
+      "validQuestions": 37398,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.94,
+      "topSubjects": [
+        "Tecnologia da Informação",
+        "Língua Portuguesa",
+        "Direito Constitucional"
+      ],
+      "topTopics": [
+        "Língua Portuguesa › Interpretação de Texto › Interpretação de Texto",
+        "Medicina › Clínica Geral › Clínica Geral",
+        "Tecnologia da Informação › Redes de Computadores › Redes de Computadores",
+        "Tecnologia da Informação › Desenvolvimento de Software › Desenvolvimento de Software",
+        "Direito Constitucional › Direitos e deveres individuais e coletivos ou direitos e deveres individuais e coletivos; direito à vida, à liberdade, à igualdade,àsegurançaeàpropriedade (artigo 5º da CF) › Direitos e deveres individuais e coletivos ou direitos e deveres individuais e coletivos; direito à vida, à liberdade, à igualdade,àsegurançaeàpropriedade (artigo 5º da CF)"
+      ]
+    },
+    {
+      "id": "ibfc",
+      "name": "IBFC",
+      "validQuestions": 33939,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.85,
+      "topSubjects": [
+        "Medicina",
+        "Enfermagem",
+        "Tecnologia da Informação"
+      ],
+      "topTopics": [
+        "Língua Portuguesa › Interpretação de Texto › Interpretação de Texto",
+        "Conhecimentos Específicos de um determinado Cargo/Área › Área: Radiologia › Área: Radiologia",
+        "Pedagogia › Temas Educacionais Pedagógicos › Temas Educacionais Pedagógicos",
+        "Medicina › Clínica Geral › Clínica Geral",
+        "Medicina › Psiquiatria › Psiquiatria"
+      ]
+    },
+    {
+      "id": "ibade",
+      "name": "IBADE",
+      "validQuestions": 32071,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.7,
+      "topSubjects": [
+        "Conhecimentos Específicos de um determinado Cargo/Área",
+        "Língua Portuguesa",
+        "Pedagogia"
+      ],
+      "topTopics": [
+        "Pedagogia › Temas Educacionais Pedagógicos › Temas Educacionais Pedagógicos",
+        "Direito Sanitário e Saúde › Geral › Geral",
+        "Medicina › Clínica Geral › Clínica Geral",
+        "Língua Portuguesa › Interpretação de Texto › Interpretação de Texto",
+        "Fonoaudiologia › Geral › Geral"
+      ]
+    },
+    {
+      "id": "selecon",
+      "name": "Selecon",
+      "validQuestions": 31996,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.48,
+      "topSubjects": [
+        "Conhecimentos Específicos de um determinado Cargo/Área",
+        "Tecnologia da Informação",
+        "Administração Geral"
+      ],
+      "topTopics": [
+        "Farmácia › Geral › Geral",
+        "Direito Sanitário e Saúde › Geral › Geral",
+        "Odontologia › Geral › Geral",
+        "Matemática › Geral › Geral",
+        "Conhecimentos Específicos de um determinado Cargo/Área › Área: Radiologia › Área: Radiologia"
+      ]
+    },
+    {
+      "id": "iades",
+      "name": "IADES",
+      "validQuestions": 31615,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.74,
+      "topSubjects": [
+        "Medicina",
+        "Enfermagem",
+        "Direito Sanitário e Saúde"
+      ],
+      "topTopics": [
+        "Medicina › Endoscopia › Endoscopia",
+        "Medicina › Oncologia (Cancerologia Clínica) › Oncologia (Cancerologia Clínica)",
+        "Direito Sanitário e Saúde › Portarias, Normas e Programas do Ministério da Saúde › Portarias, Normas e Programas do Ministério da Saúde",
+        "Medicina › Clínica Geral › Clínica Geral",
+        "Medicina › Psiquiatria › Psiquiatria"
+      ]
+    },
+    {
+      "id": "igeduc",
+      "name": "IGEDUC",
+      "validQuestions": 31364,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.03,
+      "topSubjects": [
+        "Conhecimentos Específicos de um determinado Cargo/Área",
+        "Língua Portuguesa",
+        "Direito Sanitário e Saúde"
+      ],
+      "topTopics": [
+        "Direito Sanitário e Saúde › Geral › Geral",
+        "Farmácia › Geral › Geral",
+        "Conhecimentos Específicos de um determinado Cargo/Área › Limpeza/Esterilização/Lavanderia/Copa › Limpeza/Esterilização/Lavanderia/Copa",
+        "Matemática › Geral › Geral",
+        "Psicologia › Geral › Geral"
+      ]
+    },
+    {
+      "id": "furb",
+      "name": "FURB",
+      "validQuestions": 26477,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.46,
+      "topSubjects": [
+        "Conhecimentos Específicos de um determinado Cargo/Área",
+        "Legislação Estadual, Distrital e Municipal",
+        "Pedagogia"
+      ],
+      "topTopics": [
+        "Direito Sanitário e Saúde › Geral › Geral",
+        "Legislação Estadual, Distrital e Municipal › Município de Blumenau - Legislação Aplicada › Município de Blumenau - Legislação Aplicada",
+        "Odontologia › Geral › Geral",
+        "Conhecimentos Específicos de um determinado Cargo/Área › Operador de Máquinas › Operador de Máquinas",
+        "Veterinária › Geral › Geral"
+      ]
+    },
+    {
+      "id": "iat",
+      "name": "IAT",
+      "validQuestions": 24219,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.49,
+      "topSubjects": [
+        "Conhecimentos Específicos de um determinado Cargo/Área",
+        "Direito Sanitário e Saúde",
+        "Pedagogia"
+      ],
+      "topTopics": [
+        "Direito Sanitário e Saúde › Geral › Geral",
+        "Língua Portuguesa › Sentidos do texto › Sentidos do texto",
+        "Pedagogia › Temas Educacionais Pedagógicos › Temas Educacionais Pedagógicos",
+        "Língua Portuguesa › Interpretação de Texto › Interpretação de Texto",
+        "Língua Portuguesa › Inferência Textual › Inferência Textual"
+      ]
+    },
+    {
+      "id": "idcap",
+      "name": "IDCAP",
+      "validQuestions": 21994,
+      "confidence": "ALTA",
+      "averageDifficulty": 2.31,
+      "topSubjects": [
+        "Língua Portuguesa",
+        "Informática",
+        "Direito Administrativo"
+      ],
+      "topTopics": [
+        "Direito Sanitário e Saúde › Geral › Geral",
+        "Matemática › Geral › Geral",
+        "Farmácia › Geral › Geral",
+        "Direito Administrativo › Geral › Geral",
+        "Psicologia › Geral › Geral"
+      ]
+    }
+  ]
+}

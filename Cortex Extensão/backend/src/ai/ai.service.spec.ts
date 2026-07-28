@@ -1,18 +1,18 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { AiService } from './ai.service';
 
 describe('AiService', () => {
-  let service: AiService;
+  it('não inventa uma estrutura de edital quando o serviço de IA não está configurado', async () => {
+    const previous = process.env.GEMINI_API_KEY;
+    delete process.env.GEMINI_API_KEY;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [AiService],
-    }).compile();
-
-    service = module.get<AiService>(AiService);
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+    try {
+      const service = new AiService();
+      await expect(service.structureEdital('conteúdo de edital')).rejects.toThrow(
+        'Serviço de análise de edital não configurado',
+      );
+    } finally {
+      if (previous === undefined) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = previous;
+    }
   });
 });

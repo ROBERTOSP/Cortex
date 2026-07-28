@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { computeWeeklyCapacity } from '../routine-engine/engine';
 
 type TaskType = 'revision' | 'reading' | 'questions';
 type PeakEnergyTime = 'MANHA' | 'TARDE' | 'NOITE';
@@ -99,9 +100,30 @@ export class PlanningService {
       },
     });
 
+    const [routine, contest] = await Promise.all([
+      this.database.userRoutine.findUnique({
+        where: { userId },
+        include: { availabilityWindows: true, commitments: true },
+      }),
+      this.database.contest.findFirst({
+        where: { userId, status: 'ACTIVE' },
+        orderBy: { createdAt: 'desc' },
+        include: { nodes: { where: { type: 'SUBJECT' }, include: { children: true } } },
+      }),
+    ]);
+
     const adaptiveInsights = this.buildAdaptiveInsights(attempts);
-    const insights = await this.ensureStarterInsights(adaptiveInsights);
-    const schedule = this.buildSchedule(insights, profile);
+    const editalInsights = (contest?.nodes || []).map((node) => ({
+      subject: node.name,
+      topic: node.children[0]?.name || 'Fundamentos',
+      attempts: 0, accuracy: 0, hesitationRate: 0, avgLatencySeconds: 0,
+      daysSinceLastAttempt: 99, priority: 55, recommendedTaskType: 'reading' as TaskType,
+      reason: 'Matéria do edital confirmado. Vamos construir sua base.',
+    }));
+    const insights = editalInsights.length > 0 ? editalInsights : await this.ensureStarterInsights(adaptiveInsights);
+    const schedule = routine?.timezone && routine.availabilityWindows.length > 0
+      ? this.buildScheduleFromRoutine(insights, routine)
+      : this.buildSchedule(insights, profile);
     const sortedInsights = [...insights].sort((a, b) => b.priority - a.priority);
     const strongestSubject =
       sortedInsights.length > 0
@@ -348,6 +370,43 @@ export class PlanningService {
     };
   }
 
+  private buildScheduleFromRoutine(insights: SubjectInsight[], routine: any): { dailyMinutes: number; blockMinutes: number; tasks: ScheduleTask[] } {
+    const capacity = computeWeeklyCapacity({
+      timezone: routine.timezone,
+      weekStartDate: this.toDateKey(new Date()),
+      preferences: {
+        planMode: routine.planMode || 'FLEXIBLE',
+        preferredSessionMinutes: routine.preferredSessionMinutes || 40,
+        maxSubjectsPerDay: routine.maxSubjectsPerDay || 3,
+        badDayMinimumMinutes: routine.badDayMinimumMinutes || 20,
+        missedDayStrategy: routine.missedDayStrategy || 'REDISTRIBUTE',
+        peakEnergyPeriod: routine.peakEnergyPeriod || 'MORNING',
+      },
+      availabilityWindows: routine.availabilityWindows,
+      commitments: routine.commitments,
+      checkIn: null,
+    } as any);
+    const slots: Array<{ date: string; startsAt: string; duration: number }> = [];
+    for (const day of capacity.days) {
+      let blockIndex = 0;
+      for (const interval of day.finalIntervals) {
+        let cursor = interval.startMinute;
+        while (blockIndex < day.blocks.length && cursor + day.blocks[blockIndex] <= interval.endMinute) {
+          slots.push({ date: day.dateKey, startsAt: `${String(Math.floor(cursor / 60)).padStart(2, '0')}:${String(cursor % 60).padStart(2, '0')}`, duration: day.blocks[blockIndex] });
+          cursor += day.blocks[blockIndex++];
+        }
+      }
+    }
+    const targets = this.allocateBlocks(insights, slots.length);
+    const queue = this.buildTaskQueue(insights, targets);
+    const tasks = slots.map((slot, index) => {
+      const next = queue[index];
+      const date = new Date(`${slot.date}T12:00:00`);
+      return { id: `routine-${index + 1}-${next.subject}`, date: slot.date, weekdayLabel: this.getWeekdayLabel(date), startsAt: slot.startsAt, subject: next.subject, topic: next.topic, type: next.type, duration: slot.duration, priority: next.priority, reason: next.reason, status: 'pending' as const };
+    });
+    return { dailyMinutes: Math.round(capacity.weekly.sustainableMinutes / 7), blockMinutes: routine.preferredSessionMinutes || 40, tasks };
+  }
+
   private buildTaskQueue(
     insights: SubjectInsight[],
     blockTargets: Map<string, number>,
@@ -408,35 +467,38 @@ export class PlanningService {
     insights: SubjectInsight[],
     totalBlocks: number,
   ): Map<string, number> {
-    const totalPriority = insights.reduce((sum, item) => sum + Math.max(item.priority, 1), 0);
     const allocation = new Map<string, number>();
+    const safeTotalBlocks = Math.max(0, Math.floor(totalBlocks));
 
     for (const insight of insights) {
-      const share = totalPriority > 0 ? insight.priority / totalPriority : 1 / insights.length;
-      allocation.set(insight.subject, Math.max(1, Math.round(share * totalBlocks)));
+      allocation.set(insight.subject, 0);
     }
 
-    let allocated = [...allocation.values()].reduce((sum, value) => sum + value, 0);
+    if (safeTotalBlocks === 0 || insights.length === 0) {
+      return allocation;
+    }
+
     const ordered = [...insights].sort((a, b) => b.priority - a.priority);
+    let remaining = safeTotalBlocks;
 
-    while (allocated > totalBlocks) {
-      for (const insight of [...ordered].reverse()) {
-        const current = allocation.get(insight.subject) || 0;
-        if (current <= 1 || allocated <= totalBlocks) {
-          continue;
-        }
-        allocation.set(insight.subject, current - 1);
-        allocated -= 1;
-      }
+    for (const insight of ordered) {
+      if (remaining === 0) break;
+      allocation.set(insight.subject, 1);
+      remaining -= 1;
     }
 
-    while (allocated < totalBlocks) {
+    const totalPriority = ordered.reduce(
+      (sum, item) => sum + Math.max(item.priority, 1),
+      0,
+    );
+
+    while (remaining > 0) {
       for (const insight of ordered) {
-        if (allocated >= totalBlocks) {
-          break;
-        }
-        allocation.set(insight.subject, (allocation.get(insight.subject) || 0) + 1);
-        allocated += 1;
+        if (remaining === 0) break;
+        const share = Math.max(insight.priority, 1) / totalPriority;
+        const granted = Math.min(Math.max(1, Math.round(share * remaining)), remaining);
+        allocation.set(insight.subject, (allocation.get(insight.subject) || 0) + granted);
+        remaining -= granted;
       }
     }
 

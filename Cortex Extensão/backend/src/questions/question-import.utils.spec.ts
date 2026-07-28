@@ -36,9 +36,11 @@ describe('normalizeImportedQuestion', () => {
       text: 'Brasilia',
     });
     expect(normalized.year).toBe(2024);
+    expect(normalized.sourceBoardName).toBe('Banca Y');
     expect(normalized.statementImages).toEqual(['img1.png']);
-    expect(normalized.rawJson).toEqual({
+    expect(normalized.rawJson).toMatchObject({
       orgaos: [{ nome: 'Orgao' }],
+      source_taxonomy: { board_name: 'Banca Y' },
     });
     expect(normalized.contentText).toContain('Qual e a capital?');
     expect(normalized.contentHash).toHaveLength(64);

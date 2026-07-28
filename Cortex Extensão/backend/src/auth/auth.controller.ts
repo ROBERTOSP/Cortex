@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Req, Get, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Get, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -14,6 +14,30 @@ export class AuthController {
   @Post('google')
   async googleAuth(@Body('token') token: string) {
     return this.authService.validateGoogleToken(token);
+  }
+
+  @Post('dev/login')
+  async devLogin(@Req() req, @Body() body: { email?: string; name?: string }) {
+    const enabled = (process.env.DEV_LOGIN_ENABLED || '').trim() === '1';
+    const nodeEnv = (process.env.NODE_ENV || '').trim();
+    if (!enabled || nodeEnv === 'production') {
+      throw new ForbiddenException();
+    }
+
+    const secret = (process.env.DEV_LOGIN_SECRET || '').trim();
+    if (secret) {
+      const provided = String(req.headers['x-dev-login-secret'] || '').trim();
+      if (!provided || provided !== secret) {
+        throw new ForbiddenException();
+      }
+    }
+
+    const email =
+      (body?.email || '').trim() ||
+      (process.env.DEV_LOGIN_EMAIL || '').trim() ||
+      'dev@local.cortex';
+    const name = (body?.name || '').trim() || 'Dev User';
+    return this.authService.devLogin({ email, name });
   }
 
   @UseGuards(JwtAuthGuard)

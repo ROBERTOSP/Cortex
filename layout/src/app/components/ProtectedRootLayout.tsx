@@ -10,11 +10,19 @@ type ProfileResponse = {
   };
 };
 
+type RoutineStateResponse = {
+  user: {
+    onboardingVersion: number;
+  };
+  isOnboardingV1Completed: boolean;
+};
+
 export function ProtectedRootLayout() {
   const location = useLocation();
   const { token, isReady } = useAuth();
   const [profileReady, setProfileReady] = useState(false);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [legacyOnboardingCompleted, setLegacyOnboardingCompleted] = useState(false);
+  const [routineOnboardingCompleted, setRoutineOnboardingCompleted] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -22,17 +30,26 @@ export function ProtectedRootLayout() {
     async function loadProfile() {
       if (!token) {
         setProfileReady(true);
-        setOnboardingCompleted(false);
+        setLegacyOnboardingCompleted(false);
+        setRoutineOnboardingCompleted(false);
         return;
       }
 
       try {
-        const profile = await apiFetch<ProfileResponse>("/users/me/profile");
+        const [profile, routineState] = await Promise.all([
+          apiFetch<ProfileResponse>("/users/me/profile"),
+          apiFetch<RoutineStateResponse>("/routine/me/state").catch(() => null),
+        ]);
         if (cancelled) return;
-        setOnboardingCompleted(Boolean(profile.onboarding.completed));
+        setLegacyOnboardingCompleted(Boolean(profile.onboarding.completed));
+        setRoutineOnboardingCompleted(
+          Boolean(routineState?.isOnboardingV1Completed) ||
+            Number(routineState?.user?.onboardingVersion || 0) >= 1
+        );
       } catch {
         if (cancelled) return;
-        setOnboardingCompleted(false);
+        setLegacyOnboardingCompleted(false);
+        setRoutineOnboardingCompleted(false);
       } finally {
         if (cancelled) return;
         setProfileReady(true);
@@ -61,12 +78,13 @@ export function ProtectedRootLayout() {
     return null;
   }
 
-  if (!onboardingCompleted && location.pathname !== "/onboarding") {
-    return <Navigate to="/onboarding" replace />;
-  }
+  const isOnboardingRoute =
+    location.pathname === "/onboarding" || location.pathname === "/onboarding-v1";
 
-  if (onboardingCompleted && location.pathname === "/onboarding") {
-    return <Navigate to="/" replace />;
+  const onboardingCompleted = legacyOnboardingCompleted || routineOnboardingCompleted;
+
+  if (!onboardingCompleted && !isOnboardingRoute) {
+    return <Navigate to="/onboarding-v1" replace />;
   }
 
   return <RootLayout />;

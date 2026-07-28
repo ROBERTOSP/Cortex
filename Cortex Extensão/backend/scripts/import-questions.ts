@@ -5,6 +5,7 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { normalizeImportedQuestion, type NormalizedQuestion } from '../src/questions/question-import.utils';
+import { normalizeTaxonomyKey } from '../src/questions/taxonomy-aliases';
 
 type ImportArgs = {
   dir: string;
@@ -12,6 +13,7 @@ type ImportArgs = {
   importBatch: string;
   maxFiles: number;
   maxQuestions: number;
+  confirmFullImport: boolean;
 };
 
 function parseArgs(argv: string[]): ImportArgs {
@@ -21,6 +23,7 @@ function parseArgs(argv: string[]): ImportArgs {
     importBatch: new Date().toISOString(),
     maxFiles: 0,
     maxQuestions: 0,
+    confirmFullImport: false,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -41,7 +44,13 @@ function parseArgs(argv: string[]): ImportArgs {
     } else if (current === '--max-questions' && next) {
       args.maxQuestions = Number(next) || 0;
       i += 1;
+    } else if (current === '--confirm-full-import') {
+      args.confirmFullImport = true;
     }
+  }
+
+  if (!args.confirmFullImport && args.maxFiles <= 0 && args.maxQuestions <= 0) {
+    throw new Error('Informe --max-files ou --max-questions para um piloto. A importação total exige --confirm-full-import.');
   }
 
   return args;
@@ -63,9 +72,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false,
-    },
+    ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
   });
   const prisma = new PrismaClient({
     adapter: new PrismaPg(pool),
@@ -88,37 +95,40 @@ async function main() {
   let imported = 0;
   let warnings = 0;
 
-  async function ensureBoard(name: string | null): Promise<string | null> {
+  async function ensureBoard(name: string | null, canonicalKey: string | null): Promise<string | null> {
     if (!name) return null;
-    const cached = boardCache.get(name);
+    const cacheKey = canonicalKey || normalizeTaxonomyKey(name);
+    const cached = boardCache.get(cacheKey);
     if (cached) return cached;
     const board = await prisma.questionBoard.upsert({
       where: { name },
-      update: {},
-      create: { name },
+      update: { canonicalKey: canonicalKey || normalizeTaxonomyKey(name) },
+      create: { name, canonicalKey: canonicalKey || normalizeTaxonomyKey(name) },
       select: { id: true },
     });
-    boardCache.set(name, board.id);
+    boardCache.set(cacheKey, board.id);
     return board.id;
   }
 
   async function ensureSubject(name: string | null): Promise<string | null> {
     if (!name) return null;
-    const cached = subjectCache.get(name);
+    const canonicalKey = normalizeTaxonomyKey(name);
+    const cached = subjectCache.get(canonicalKey);
     if (cached) return cached;
     const subject = await prisma.questionSubject.upsert({
       where: { name },
-      update: {},
-      create: { name },
+      update: { canonicalKey },
+      create: { name, canonicalKey },
       select: { id: true },
     });
-    subjectCache.set(name, subject.id);
+    subjectCache.set(canonicalKey, subject.id);
     return subject.id;
   }
 
   async function ensureTopic(name: string | null, subjectId: string | null): Promise<string | null> {
     if (!name) return null;
     const cacheKey = `${subjectId ?? 'root'}::${name}`;
+    const canonicalKey = normalizeTaxonomyKey(name);
     const cached = topicCache.get(cacheKey);
     if (cached) return cached;
     const existing = await prisma.questionTopic.findFirst({
@@ -133,6 +143,7 @@ async function main() {
       (await prisma.questionTopic.create({
         data: {
           name,
+          canonicalKey,
           ...(subjectId ? { subjectId } : {}),
         },
         select: { id: true },
@@ -144,6 +155,7 @@ async function main() {
   async function ensureSubtopic(name: string | null, topicId: string | null): Promise<string | null> {
     if (!name) return null;
     const cacheKey = `${topicId ?? 'root'}::${name}`;
+    const canonicalKey = normalizeTaxonomyKey(name);
     const cached = subtopicCache.get(cacheKey);
     if (cached) return cached;
     const existing = await prisma.questionSubtopic.findFirst({
@@ -158,6 +170,7 @@ async function main() {
       (await prisma.questionSubtopic.create({
         data: {
           name,
+          canonicalKey,
           ...(topicId ? { topicId } : {}),
         },
         select: { id: true },
@@ -166,8 +179,11 @@ async function main() {
     return subtopic.id;
   }
 
-  async function importQuestion(question: NormalizedQuestion) {
-    const boardId = await ensureBoard(question.boardName);
+  async function importQuestion(question: NormalizedQuestion, sourceFile: string) {
+    const boardId = await ensureBoard(
+      question.boardName,
+      question.canonicalBoardId || (question.boardName ? normalizeTaxonomyKey(question.boardName) : null),
+    );
     const subjectId = await ensureSubject(question.subjectName);
     const topicId = await ensureTopic(question.topicName, subjectId);
     const subtopicId = await ensureSubtopic(question.subtopicName, topicId);
@@ -254,6 +270,23 @@ async function main() {
           })),
         });
       }
+
+      await tx.questionProvenance.upsert({
+        where: { questionId: saved.id },
+        update: {
+          sourceSystem: 'legacy_question_export',
+          sourceRecordId: question.cortexId,
+          sourceFile,
+        },
+        create: {
+          questionId: saved.id,
+          sourceSystem: 'legacy_question_export',
+          sourceRecordId: question.cortexId,
+          sourceFile,
+          rightsStatus: 'PENDING',
+          provenanceConfidence: 'UNVERIFIED',
+        },
+      });
     });
   }
 
@@ -267,7 +300,7 @@ async function main() {
       for (const row of rows) {
         processed += 1;
         const normalized = normalizeImportedQuestion(row as never);
-        await importQuestion(normalized);
+        await importQuestion(normalized, path.basename(filePath));
         imported += 1;
 
         if (args.maxQuestions > 0 && imported >= args.maxQuestions) {

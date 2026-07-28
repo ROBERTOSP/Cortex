@@ -65,6 +65,12 @@ export function RootLayout() {
         description: "Planejamento semanal com prioridades e replanejamento inteligente.",
       };
     }
+    if (location.pathname.startsWith("/onboarding-v1")) {
+      return {
+        title: "Onboarding v1",
+        description: "Defina sua rotina semanal para calcular capacidade e blocos de estudo.",
+      };
+    }
     if (location.pathname.startsWith("/onboarding")) {
       return {
         title: "Onboarding",
@@ -94,6 +100,11 @@ export function RootLayout() {
     }
     return location.pathname.startsWith(path);
   };
+
+  // O onboarding é uma experiência focada: não exibe navegação, menu ou cabeçalho da plataforma.
+  if (location.pathname === "/onboarding-v1" || location.pathname === "/onboarding") {
+    return <Outlet />;
+  }
 
   const SidebarContent = () => (
     <>

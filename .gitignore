@@ -37,3 +37,15 @@ Cortex Extensão/backend-legacy/data/
 Cortex Extensão/extension.zip
 layout/guidelines1.zip
 layout/Captura de tela *.png
+
+# Cortex question-bank source data and generated analytical artifacts
+Cortex Scraper/
+crawler/
+data/
+database/
+Cortex Extensão/backend/reports/
+Cortex Extensão/backend/question-analytics-*.zip
+Cortex Extensão/backend/*.dump
+*.dump
+*.exe
+*.zip
