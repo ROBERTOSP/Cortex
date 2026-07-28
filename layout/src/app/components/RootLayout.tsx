@@ -102,7 +102,11 @@ export function RootLayout() {
   };
 
   // O onboarding é uma experiência focada: não exibe navegação, menu ou cabeçalho da plataforma.
-  if (location.pathname === "/onboarding-v1" || location.pathname === "/onboarding") {
+  if (
+    location.pathname === "/onboarding-v1" ||
+    location.pathname === "/onboarding" ||
+    location.pathname.startsWith("/edital-review/")
+  ) {
     return <Outlet />;
   }
 
