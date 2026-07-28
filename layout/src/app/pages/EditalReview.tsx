@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Button } from "../components/ui/button";
-import { Card } from "../components/ui/card";
 import { apiFetch } from "../lib/api";
 
 type Topic = { name: string; subtopics: string[] };
@@ -73,7 +72,7 @@ export function EditalReview() {
   if (!review) return <main className="mx-auto max-w-3xl p-8 text-muted-foreground">Lendo seu edital…</main>;
 
   return (
-    <main className="onboarding-light mx-auto min-h-screen max-w-5xl px-5 py-8">
+    <main className="onboarding-light mx-auto min-h-screen max-w-6xl px-6 py-10">
       <header className="mb-6">
         <p className="text-sm font-semibold text-primary">Seu edital foi lido</p>
         <h1 className="mt-1 text-3xl font-semibold">Confira o que encontramos antes de montar seu plano</h1>
@@ -81,9 +80,10 @@ export function EditalReview() {
           Escolha o cargo. A partir dele, o Cortex usa apenas as matérias e regras que fazem sentido para o seu estudo.
         </p>
       </header>
-      <Card className="rounded-3xl p-5 md:p-8">
-        <div className="border-b pb-5">
-          <strong>{review.name}</strong>
+      <div className="space-y-8">
+        <div className="border-b pb-6">
+          <p className="text-sm font-semibold text-primary">Etapa 1 de 5 · Seu edital</p>
+          <h2 className="mt-2 text-3xl font-semibold">{review.name}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {review.editalDraft?.board || review.board}{review.examDate ? ` · Prova: ${new Date(review.examDate).toLocaleDateString("pt-BR")}` : ""}
           </p>
@@ -91,8 +91,10 @@ export function EditalReview() {
         </div>
 
         {jobs.length > 0 && (
-          <section className="mt-6">
-            <label className="text-sm font-semibold" htmlFor="job">Qual cargo você vai disputar?</label>
+          <section className="rounded-3xl border bg-muted/20 p-5 md:p-7">
+            <p className="text-sm font-semibold text-primary">Defina seu foco</p>
+            <label className="mt-2 block text-xl font-semibold" htmlFor="job">Qual cargo você vai disputar?</label>
+            <p className="mt-1 text-sm text-muted-foreground">Vamos usar apenas o conteúdo, requisitos e prioridades deste perfil.</p>
             <select id="job" className="mt-2 h-11 w-full rounded-xl border bg-background px-3" value={selectedJobName} onChange={(event) => chooseJob(event.target.value)}>
               {jobs.map((job) => <option key={job.name} value={job.name}>{job.name}</option>)}
             </select>
@@ -100,7 +102,7 @@ export function EditalReview() {
         )}
 
         {selectedJob && (
-          <section className="mt-5 grid gap-4 md:grid-cols-2">
+          <section className="grid gap-4 md:grid-cols-2">
             <div className="rounded-2xl bg-muted/50 p-4 text-sm"><strong>Requisitos</strong><p className="mt-2 text-muted-foreground">{selectedJob.requirements.length ? selectedJob.requirements.join(" · ") : "Não identificado no texto."}</p></div>
             <div className="rounded-2xl bg-muted/50 p-4 text-sm"><strong>Vagas e modalidades</strong><p className="mt-2 text-muted-foreground">{[selectedJob.vacancies, ...selectedJob.quotas, ...selectedJob.pcd].filter(Boolean).join(" · ") || "Confira as regras no edital."}</p></div>
           </section>
@@ -109,15 +111,15 @@ export function EditalReview() {
         {review.editalDraft?.notices?.length ? <div className="mt-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><strong>Atenção</strong><ul className="mt-2 list-disc space-y-1 pl-5">{review.editalDraft.notices.map((notice) => <li key={notice}>{notice}</li>)}</ul></div> : null}
         {error && <p className="mt-4 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
 
-        <section className="mt-7">
-          <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Matérias identificadas</h2><span className="text-sm text-muted-foreground">{subjects.length} disciplinas</span></div>
+        <section className="border-t pt-8">
+          <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold text-primary">Conteúdo programático</p><h2 className="mt-1 text-2xl font-semibold">Matérias identificadas</h2></div><span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">{subjects.length} disciplinas</span></div>
           <p className="mt-1 text-sm text-muted-foreground">Revise os nomes e remova o que não fizer parte do cargo escolhido.</p>
           <div className="mt-4 space-y-3">
             {subjects.map((subject, index) => <section key={`${subject.name}-${index}`} className="rounded-2xl border p-4"><div className="flex items-center justify-between gap-3"><input aria-label={`Disciplina ${index + 1}`} className="min-w-0 flex-1 bg-transparent font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary" value={subject.name} onChange={(event) => setSubjects(subjects.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))}/><Button variant="ghost" size="sm" onClick={() => setSubjects(subjects.filter((_, itemIndex) => itemIndex !== index))}>Remover</Button></div><ul className="mt-3 space-y-2 text-sm text-muted-foreground">{subject.topics.map((topic, topicIndex) => <li key={`${topic.name}-${topicIndex}`}><strong className="text-foreground">{topic.name}</strong>{topic.subtopics.length ? `: ${topic.subtopics.join(", ")}` : ""}</li>)}</ul></section>)}
           </div>
         </section>
-        <div className="mt-7 flex flex-wrap justify-between gap-3 border-t pt-5"><Button variant="outline" onClick={() => navigate("/onboarding")}>Voltar</Button><Button onClick={confirm} disabled={saving || subjects.length === 0}>{saving ? "Criando plano…" : "Confirmar edital e criar plano"}</Button></div>
-      </Card>
+        <div className="mt-7 flex flex-wrap justify-between gap-3 border-t pt-5"><Button variant="outline" onClick={() => navigate("/onboarding-v1")}>Voltar</Button><Button onClick={confirm} disabled={saving || subjects.length === 0}>{saving ? "Criando plano…" : "Confirmar edital e criar plano"}</Button></div>
+      </div>
     </main>
   );
 }
