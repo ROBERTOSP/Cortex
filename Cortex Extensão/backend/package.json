@@ -18,6 +18,7 @@
     "index:questions": "ts-node scripts/build-question-taxonomy-index.ts",
     "audit:question-images": "ts-node scripts/audit-question-images.ts",
     "profile:board-topics": "ts-node scripts/build-board-topic-profile.ts",
+    "import:board-aggregates": "ts-node scripts/import-board-topic-aggregates.ts",
     "profile:beta-boards": "ts-node scripts/build-beta-board-profiles.ts",
     "test:db:migrations": "ts-node scripts/test-db-migrations.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

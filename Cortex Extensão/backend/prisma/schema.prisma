@@ -319,6 +319,9 @@ model KnowledgeNode {
   taxonomyStatus String @default("PENDING") @map("taxonomy_status") // PENDING, MATCHED, AMBIGUOUS, UNMATCHED
   taxonomyMatch  Json?  @map("taxonomy_match")
   taxonomyMatchedAt DateTime? @map("taxonomy_matched_at")
+  strategicPriority Float @default(0) @map("strategic_priority")
+  priorityEvidence Json? @map("priority_evidence")
+  priorityCalculatedAt DateTime? @map("priority_calculated_at")
   
   notes       Note[]
   flashcards  Flashcard[]
@@ -449,6 +452,33 @@ model QuestionProvenance {
   @@index([rightsStatus])
   @@index([sourceSystem])
   @@map("question_provenance")
+}
+
+model BoardTopicAggregate {
+  id                  String   @id @default(uuid())
+  boardName           String   @map("board_name")
+  boardCanonicalKey   String   @map("board_canonical_key")
+  subjectName         String   @map("subject_name")
+  subjectCanonicalKey String   @map("subject_canonical_key")
+  topicName           String   @map("topic_name")
+  topicCanonicalKey   String   @map("topic_canonical_key")
+  subtopicName        String   @map("subtopic_name")
+  subtopicCanonicalKey String  @map("subtopic_canonical_key")
+  year                Int?
+  yearKey             String   @map("year_key")
+  questionCount       Int      @map("question_count")
+  activeQuestionCount Int      @map("active_question_count")
+  averageDifficulty   Float?   @map("average_difficulty")
+  confidence          String
+  sourceStatus        String   @map("source_status")
+  sourceGeneratedAt   DateTime? @map("source_generated_at")
+  importedAt          DateTime @default(now()) @map("imported_at")
+
+  @@unique([boardCanonicalKey, subjectCanonicalKey, topicCanonicalKey, subtopicCanonicalKey, yearKey])
+  @@index([boardCanonicalKey, subjectCanonicalKey])
+  @@index([boardCanonicalKey, topicCanonicalKey])
+  @@index([boardCanonicalKey, year])
+  @@map("board_topic_aggregates")
 }
 
 model QuestionBoard {

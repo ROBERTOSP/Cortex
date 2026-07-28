@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 const pdf = require('pdf-parse');
 import { DatabaseService } from '../database/database.service';
 import { AiService } from '../ai/ai.service';
-import { normalizeTaxonomyKey } from '../questions/taxonomy-aliases';
+import { normalizeTaxonomyKey, resolveBoardAlias } from '../questions/taxonomy-aliases';
 
 type StructuredSubject = {
   name: string;
@@ -344,7 +344,7 @@ export class ContestsService {
 
     await this.database.knowledgeNode.deleteMany({ where: { contestId } });
     await this.createKnowledgeTree(contestId, draft.subjects);
-    await this.resolveTaxonomyForContest(contestId);
+    await this.resolveTaxonomyForContest(contestId, (data.board || contest.board).trim());
     await this.database.contest.update({
       where: { id: contestId },
       data: {
@@ -386,7 +386,7 @@ export class ContestsService {
     };
   }
 
-  private async resolveTaxonomyForContest(contestId: string) {
+  private async resolveTaxonomyForContest(contestId: string, boardName: string) {
     const nodes = await this.database.knowledgeNode.findMany({
       where: { contestId },
       select: { id: true, parentId: true, name: true, type: true },
@@ -425,6 +425,39 @@ export class ContestsService {
           taxonomyMatchedAt: new Date(),
         },
       });
+    }
+
+    await this.calculateTopicPriorities(contestId, boardName, nodes);
+  }
+
+  private async calculateTopicPriorities(
+    contestId: string,
+    boardName: string,
+    nodes: Array<{ id: string; parentId: string | null; name: string; type: string }>,
+  ) {
+    const board = resolveBoardAlias(boardName).canonical;
+    const subjects = new Map(nodes.filter((node) => node.type === 'SUBJECT').map((node) => [node.id, node]));
+    const topics = nodes.filter((node) => node.type === 'TOPIC' && node.parentId && subjects.has(node.parentId));
+    const evidence = await Promise.all(topics.map(async (topic) => {
+      const subject = subjects.get(topic.parentId as string)!;
+      const stats = board ? await this.database.boardTopicAggregate.aggregate({
+        where: { boardCanonicalKey: board.id, subjectCanonicalKey: normalizeTaxonomyKey(subject.name), topicCanonicalKey: normalizeTaxonomyKey(topic.name) },
+        _sum: { questionCount: true, activeQuestionCount: true }, _max: { year: true }, _avg: { averageDifficulty: true },
+      }) : null;
+      return { topic, subject, count: stats?._sum.questionCount || 0, active: stats?._sum.activeQuestionCount || 0, recentYear: stats?._max.year || null, difficulty: stats?._avg.averageDifficulty || null };
+    }));
+    const maxCount = Math.max(1, ...evidence.map((item) => item.count));
+    const now = new Date();
+    for (const item of evidence) {
+      const incidence = item.count / maxCount;
+      const recency = item.recentYear ? Math.max(0, Math.min(1, 1 - (new Date().getFullYear() - item.recentYear) / 10)) : 0;
+      const priority = item.count > 0 ? Math.round((incidence * 0.75 + recency * 0.25) * 100) : 0;
+      await this.database.knowledgeNode.update({ where: { id: item.topic.id }, data: { strategicPriority: priority, priorityCalculatedAt: now, priorityEvidence: { board: board?.id || null, questionCount: item.count, activeQuestionCount: item.active, mostRecentYear: item.recentYear, averageDifficulty: item.difficulty, incidenceScore: Number(incidence.toFixed(4)), recencyScore: Number(recency.toFixed(4)) } } });
+    }
+    for (const subject of subjects.values()) {
+      const values = evidence.filter((item) => item.subject.id === subject.id).map((item) => item.count > 0 ? Math.round(((item.count / maxCount) * 0.75 + (item.recentYear ? Math.max(0, Math.min(1, 1 - (new Date().getFullYear() - item.recentYear) / 10)) : 0) * 0.25) * 100) : 0);
+      const priority = values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
+      await this.database.knowledgeNode.update({ where: { id: subject.id }, data: { strategicPriority: priority, priorityCalculatedAt: now, priorityEvidence: { board: board?.id || null, topicCount: values.length, method: 'mean_topic_incidence_and_recency' } } });
     }
   }
 
