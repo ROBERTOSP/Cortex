@@ -40,6 +40,27 @@ export class AuthController {
     return this.authService.devLogin({ email, name });
   }
 
+  @Post('register')
+  async register(@Body() body: {
+    email?: string;
+    password?: string;
+    name?: string;
+    phone?: string;
+    selfDeclaredColor?: string;
+    hasDisability?: boolean;
+    birthDate?: string;
+    sex?: string;
+    city?: string;
+    availableOtherStates?: boolean;
+  }) {
+    return this.authService.registerWithPassword(body);
+  }
+
+  @Post('login')
+  async login(@Body() body: { email?: string; password?: string }) {
+    return this.authService.loginWithPassword(body);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async me(@Req() req) {

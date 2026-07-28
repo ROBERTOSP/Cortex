@@ -115,6 +115,14 @@ model User {
   name            String?
   avatarUrl       String?
   googleId        String?  @unique
+  passwordHash    String?  @map("password_hash")
+  phone           String?
+  selfDeclaredColor String? @map("self_declared_color")
+  hasDisability   Boolean? @map("has_disability")
+  birthDate       DateTime? @map("birth_date")
+  sex             String?
+  city            String?
+  availableOtherStates Boolean? @map("available_other_states")
   tokens          Int      @default(100)
   
   // Perfil Cognitivo / Rotina
