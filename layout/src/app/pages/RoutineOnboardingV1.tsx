@@ -368,48 +368,14 @@ export function RoutineOnboardingV1() {
         )}
         {step === 0 && (
           <section className="py-7">
-            <p className="text-sm font-semibold text-primary">Seu objetivo</p>
+            <p className="text-sm font-semibold text-primary">Conheça seu edital</p>
             <h2 className="mt-1 text-2xl font-semibold">
-              Onde você quer chegar?
+              Vamos começar pelo seu edital
             </h2>
             <p className="mt-2 text-muted-foreground">
-              Escolha um ponto de partida. Você pode ajustar tudo depois.
+              Envie o documento ou cole o link. O Cortex encontra os cargos, regras e matérias antes de pedir informações sobre sua rotina.
             </p>
-            <div className="mt-7 grid gap-5 md:grid-cols-2">
-              <div>
-                <Label>Seu nível de conhecimento atual</Label>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Não é uma prova: só nos ajuda a começar no ritmo certo.
-                </p>
-                <div className="mt-3 grid gap-2">
-                  {[
-                    [
-                      "BEGINNER",
-                      "Iniciante",
-                      "Estou começando ou retomando a base",
-                    ],
-                    [
-                      "INTERMEDIATE",
-                      "Intermediário",
-                      "Já estudei parte do conteúdo",
-                    ],
-                    [
-                      "ADVANCED",
-                      "Avançado",
-                      "Quero revisar e ganhar desempenho",
-                    ],
-                  ].map(([v, t, d]) => (
-                    <Choice
-                      key={v}
-                      selected={goal.studyLevel === v}
-                      onClick={() => setGoal({ ...goal, studyLevel: v })}
-                      title={t}
-                      detail={d}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-4">
+            <div className="mt-7 max-w-2xl space-y-4">
                 <div>
                   <Label htmlFor="objective">Qual é seu objetivo?</Label>
                   <Input
@@ -505,7 +471,6 @@ export function RoutineOnboardingV1() {
                   {editalMode === "link" && <Input className="mt-3" type="url" value={editalLink} onChange={(event) => setEditalLink(event.target.value)} placeholder="https://.../edital.pdf" />}
                   {editalMode === "catalog" && <select className="mt-3 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={catalogId} onChange={(event) => setCatalogId(event.target.value)}><option value="">Escolha um edital</option>{catalog.map((item) => <option key={item.id} value={item.id}>{item.name} — {item.targetJob}</option>)}</select>}
                 </div>
-              </div>
             </div>
           </section>
         )}
@@ -517,6 +482,13 @@ export function RoutineOnboardingV1() {
             <h2 className="mt-1 text-2xl font-semibold">
               Vamos adaptar o plano ao seu ritmo
             </h2>
+            <div className="mt-6">
+              <Label>Qual é seu nível de conhecimento atual?</Label>
+              <p className="mt-1 text-sm text-muted-foreground">Não é uma prova: isso apenas define o ponto de partida do seu plano.</p>
+              <div className="mt-3 grid gap-2 md:grid-cols-3">
+                {[["BEGINNER", "Iniciante", "Estou começando ou retomando a base"], ["INTERMEDIATE", "Intermediário", "Já estudei parte do conteúdo"], ["ADVANCED", "Avançado", "Quero revisar e ganhar desempenho"]].map(([v, t, d]) => <Choice key={v} selected={goal.studyLevel === v} onClick={() => setGoal({ ...goal, studyLevel: v })} title={t} detail={d} />)}
+              </div>
+            </div>
             <div className="mt-7 grid gap-6 md:grid-cols-2">
               <div>
                 <Label>Em qual período você rende melhor?</Label>
