@@ -474,7 +474,7 @@ export function RoutineOnboardingV1() {
           <section className="py-7">
             <p className="text-sm font-semibold text-primary">Seu edital foi analisado</p>
             <h2 className="mt-1 text-3xl font-semibold">{editalReview.name}</h2>
-            <p className="mt-3 max-w-4xl text-muted-foreground">{editalReview.editalDraft?.summary || "Confira os dados extraídos antes de continuar."}</p>
+            {(editalReview.editalDraft?.board || editalReview.board) ? <p className="mt-3 text-sm text-muted-foreground">Banca identificada: <strong className="text-foreground">{editalReview.editalDraft?.board || editalReview.board}</strong></p> : null}
             <div className="mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.7fr)_minmax(260px,.8fr)]">
               <div>
                 <div className="flex items-baseline justify-between gap-3"><h3 className="font-semibold">Cargos identificados</h3><span className="text-sm text-muted-foreground">Escolha o cargo pretendido</span></div>
