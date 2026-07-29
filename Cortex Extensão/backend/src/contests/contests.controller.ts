@@ -101,6 +101,13 @@ export class ContestsController {
     return this.contestsService.getEditalReviewForUser(userId, contestId);
   }
 
+  @Post(':contestId/reanalyze-edital')
+  reanalyzeEdital(@Req() req, @Param('contestId') contestId: string) {
+    const userId = String(req.user?.sub || '');
+    if (!userId) throw new UnauthorizedException();
+    return this.contestsService.reanalyzeEditalForUser(userId, contestId);
+  }
+
   @Post(':contestId/confirm-edital')
   confirmEdital(@Req() req, @Param('contestId') contestId: string, @Body() body: Record<string, unknown>) {
     const userId = String(req.user?.sub || '');

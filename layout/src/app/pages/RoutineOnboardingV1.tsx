@@ -350,6 +350,21 @@ export function RoutineOnboardingV1() {
       setSaving(false);
     }
   };
+  const reanalyzeCurrentEdital = async () => {
+    if (!draftContestId) return;
+    setSaving(true);
+    setError("");
+    try {
+      const contest = await apiFetch<any>(`/contests/${draftContestId}/reanalyze-edital`, { method: "POST" });
+      setEditalReview(contest);
+      setContestCreated(true);
+      setGoal((current) => ({ ...current, targetJob: "" }));
+    } catch (e: any) {
+      setError(e.message || "Não foi possível reanalisar este edital.");
+    } finally {
+      setSaving(false);
+    }
+  };
   const advance = async () => {
     setError("");
     if (step === 0 && editalMode === "none" && !goal.title.trim()) {
@@ -477,7 +492,7 @@ export function RoutineOnboardingV1() {
                 {selectedEditalJob ? <><p className="mt-1 text-sm font-medium text-primary">{selectedEditalJob.baseJob || selectedEditalJob.name}</p><p className="mt-3 text-sm text-muted-foreground">{selectedEditalJob.taskSummary || "Selecione um perfil para conferir requisitos e matérias específicas."}</p><div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Requisitos</p><p className="mt-1 text-sm">{selectedEditalJob.requirements?.join(" · ") || "Não identificado no edital."}</p></div>{selectedEditalJob.tasks?.length ? <div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Atribuições</p><ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">{selectedEditalJob.tasks.slice(0, 6).map((task: string) => <li key={task} className="flex gap-2"><span className="text-primary">•</span><span>{task}</span></li>)}</ul></div> : null}<div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Matérias do perfil</p><ul className="mt-2 grid gap-2 text-sm">{(selectedEditalJob.subjects || []).map((subject: any) => <li key={subject.name} className="rounded-lg border bg-background px-3 py-2">{subject.name}</li>)}</ul></div></> : <p className="mt-2 text-sm text-muted-foreground">Escolha um perfil para ver requisitos, atribuições e matérias.</p>}
               </div>
             </div>
-            <div className="mt-8 flex justify-end"><Button onClick={confirmSelectedProfile} disabled={!goal.targetJob || saving}>{saving ? "Salvando perfil…" : "Confirmar cargo e continuar"} <ChevronRight /></Button></div>
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5"><div><Button type="button" variant="outline" onClick={reanalyzeCurrentEdital} disabled={saving}>Reanalisar edital</Button><p className="mt-1 text-xs text-muted-foreground">Usa o PDF já salvo. Uma nova análise de IA pode consumir créditos.</p></div><Button onClick={confirmSelectedProfile} disabled={!goal.targetJob || saving}>{saving ? "Salvando perfil…" : "Confirmar cargo e continuar"} <ChevronRight /></Button></div>
           </section>
         ) : step === 0 && (
           <section className="py-7">

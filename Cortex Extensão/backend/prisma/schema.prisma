@@ -319,6 +319,7 @@ model EditalVersion {
   sourceUrl       String?  @map("source_url")
   fileName        String?  @map("file_name")
   contentHash     String?  @map("content_hash")
+  sourceText      String?  @map("source_text")
   extraction      Json     @map("extraction")
   status          String   @default("REVIEW")
   isActive        Boolean  @default(false) @map("is_active")

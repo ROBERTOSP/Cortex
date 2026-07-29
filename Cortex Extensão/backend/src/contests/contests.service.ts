@@ -209,7 +209,7 @@ export class ContestsService {
       await this.createKnowledgeTree(contest.id, structure.subjects || []);
     }
     if (needsReview && extraction) {
-      await this.database.editalVersion.create({ data: { contestId: contest.id, sequence: 1, sourceType: source || 'PDF', sourceUrl: data.editalSourceUrl || null, extraction } });
+      await this.database.editalVersion.create({ data: { contestId: contest.id, sequence: 1, sourceType: source || 'PDF', sourceUrl: data.editalSourceUrl || null, sourceText: editalText || null, extraction } });
     }
 
     return this.findOneForUser(userId, contest.id);
@@ -364,6 +364,39 @@ export class ContestsService {
     if (!contest) throw new NotFoundException('Concurso não encontrado');
     if (contest.status !== 'DRAFT') throw new BadRequestException('Este edital não está aguardando revisão');
     return contest;
+  }
+
+  async reanalyzeEditalForUser(userId: string, contestId: string) {
+    const contest = await this.database.contest.findFirst({
+      where: { id: contestId, userId },
+      include: { editalVersions: { orderBy: { sequence: 'desc' }, take: 1 } },
+    });
+    if (!contest) throw new NotFoundException('Concurso não encontrado');
+    const latest = contest.editalVersions[0];
+    if (!latest?.sourceText) {
+      throw new BadRequestException('A fonte deste edital não foi preservada. Envie o PDF uma última vez para habilitar novas análises sem reupload.');
+    }
+    const extraction = await this.ai.extractEditalDetails(latest.sourceText);
+    const sequence = latest.sequence + 1;
+    await this.database.$transaction([
+      this.database.contest.update({
+        where: { id: contestId },
+        data: { status: 'DRAFT', editalDraft: extraction, editalExtractedAt: new Date(), editalConfirmedAt: null },
+      }),
+      this.database.editalVersion.create({
+        data: {
+          contestId,
+          sequence,
+          sourceType: latest.sourceType,
+          sourceUrl: latest.sourceUrl,
+          fileName: latest.fileName,
+          contentHash: latest.contentHash,
+          sourceText: latest.sourceText,
+          extraction,
+        },
+      }),
+    ]);
+    return this.findOneForUser(userId, contestId);
   }
 
   async confirmEditalForUser(
