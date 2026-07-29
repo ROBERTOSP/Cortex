@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { PDFParse } from 'pdf-parse';
 import { DatabaseService } from '../database/database.service';
 import { AiService, type EditalExtraction } from '../ai/ai.service';
@@ -241,6 +241,7 @@ export class ContestsService {
       });
     } catch (error) {
       console.error('Erro ao processar edital:', error);
+      if (error instanceof HttpException) throw error;
       throw new BadRequestException('Falha ao processar o edital');
     }
   }

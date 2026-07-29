@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, TooManyRequestsException } from '@nestjs/common';
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
 export type EditalExtraction = {
@@ -79,6 +79,9 @@ Texto do edital:\n${analysisText}`;
       return this.applyProfileRequirementEvidence(data, text);
     } catch (error) {
       console.error('Erro na extração detalhada do edital:', error);
+      if ((error as { status?: number })?.status === 429) {
+        throw new TooManyRequestsException('O limite mensal da IA para análise de editais foi atingido. Ajuste o limite de gastos no AI Studio antes de tentar novamente.');
+      }
       throw new Error('Não foi possível extrair os dados do edital com segurança');
     }
   }
