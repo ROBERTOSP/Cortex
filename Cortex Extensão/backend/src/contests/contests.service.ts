@@ -256,15 +256,23 @@ export class ContestsService {
       /CRONOGRAMA|INSCRI[CÇ][AÃ]O|DATA|RESULTADO|RECURSO/i,
     ];
     const ranked = normalized
-      .map((page, index) => ({ index, score: signals.reduce((total, signal) => total + (signal.test(page) ? 1 : 0), 0) }))
+      .map((page, index) => {
+        const score = signals.reduce((total, signal) => total + (signal.test(page) ? 1 : 0), 0);
+        const profileSection = /CARGO.{0,160}PERFIL|PERFIL\s*\d+|REQUISITOS\s*:/is.test(page);
+        return { index, score: score + (profileSection ? 8 : 0), profileSection };
+      })
       .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score || a.index - b.index);
     if (ranked.length < 2) return fallback;
     const selected = new Set<number>();
-    ranked.slice(0, 16).forEach(({ index }) => {
+    ranked.slice(0, 20).forEach(({ index }) => {
       for (let page = Math.max(0, index - 1); page <= Math.min(normalized.length - 1, index + 2); page += 1) selected.add(page);
     });
-    const text = [...selected].sort((a, b) => a - b).map((index) => normalized[index]).join('\n\n');
+    const profileIndexes = new Set(ranked.filter((item) => item.profileSection).map((item) => item.index));
+    const text = [
+      ...[...profileIndexes].sort((a, b) => a - b).map((index) => normalized[index]),
+      ...[...selected].sort((a, b) => a - b).filter((index) => !profileIndexes.has(index)).map((index) => normalized[index]),
+    ].join('\n\n');
     return text.length >= 4000 ? text.slice(0, 60000) : fallback;
   }
 
