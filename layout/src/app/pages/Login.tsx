@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, Sparkles, UserRound } from "
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { useAuth } from "../auth/AuthContext";
+import { DisplayPreferences } from "../components/DisplayPreferences";
 
 export function Login() {
   const navigate = useNavigate();
@@ -73,7 +74,7 @@ export function Login() {
     <main className="min-h-screen bg-background px-5 py-6 text-foreground sm:px-8">
       <div className="flex w-full items-center justify-between lg:px-4 xl:px-8">
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Voltar para a página inicial</Link>
-        <Link to="/" className="flex items-center gap-2" aria-label="Cortex"><span className="h-9 w-9 overflow-hidden rounded-xl"><img src="/brand/cortex-logo.png" alt="" className="h-full w-full object-contain" /></span><strong>Cortex</strong></Link>
+        <div className="flex items-center gap-3"><DisplayPreferences compact /><Link to="/" className="flex items-center gap-2" aria-label="Cortex"><span className="h-9 w-9 overflow-hidden rounded-xl"><img src="/brand/cortex-logo.png" alt="" className="h-full w-full object-contain" /></span><strong>Cortex</strong></Link></div>
       </div>
 
       <section className="grid min-h-[calc(100vh-96px)] w-full items-start gap-10 py-10 lg:grid-cols-[.95fr_1.05fr] lg:px-4 lg:items-center xl:px-8">

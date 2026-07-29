@@ -21,6 +21,7 @@ import { Badge } from "./ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Separator } from "./ui/separator";
 import { useAuth } from "../auth/AuthContext";
+import { DisplayPreferences } from "./DisplayPreferences";
 
 export function RootLayout() {
   const navigate = useNavigate();
@@ -242,6 +243,7 @@ export function RootLayout() {
             </div>
 
             <div className="flex items-center gap-2">
+              <DisplayPreferences compact />
               <Button variant="ghost" size="icon" className="hidden md:inline-flex">
                 <Bell className="w-4 h-4" />
               </Button>

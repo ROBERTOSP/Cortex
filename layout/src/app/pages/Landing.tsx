@@ -12,6 +12,7 @@ import {
   Target,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { DisplayPreferences } from "../components/DisplayPreferences";
 
 const features = [
   {
@@ -56,9 +57,7 @@ export function Landing() {
           <a href="#recursos" className="transition-colors hover:text-foreground">Recursos</a>
           <a href="#para-voce" className="transition-colors hover:text-foreground">Para você</a>
         </nav>
-        <Button asChild variant="outline" className="rounded-xl">
-          <Link to="/login">Entrar</Link>
-        </Button>
+        <div className="flex items-center gap-2"><DisplayPreferences compact /><Button asChild variant="outline" className="rounded-xl"><Link to="/login">Entrar</Link></Button></div>
       </header>
 
       <section className="grid w-full gap-12 px-6 pb-20 pt-14 lg:grid-cols-[1.08fr_.92fr] lg:px-10 lg:pb-28 lg:pt-24 xl:px-14">
