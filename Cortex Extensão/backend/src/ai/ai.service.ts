@@ -75,11 +75,79 @@ Texto do edital:\n${text.substring(0, 24000)}`;
       const jsonText = (await result.response).text().replace(/```json|```/g, '').trim();
       const data = JSON.parse(this.extractJsonObject(jsonText)) as EditalExtraction;
       if (!Array.isArray(data.jobs)) throw new Error('Cargos não encontrados na resposta');
-      return data;
+      return this.applyProfileRequirementEvidence(data, text);
     } catch (error) {
       console.error('Erro na extração detalhada do edital:', error);
       throw new Error('Não foi possível extrair os dados do edital com segurança');
     }
+  }
+
+  private applyProfileRequirementEvidence(data: EditalExtraction, text: string): EditalExtraction {
+    const evidence = this.extractProfileRequirementEvidence(text);
+    if (evidence.length === 0) return data;
+
+    return {
+      ...data,
+      jobs: data.jobs.map((job) => {
+        const jobKey = this.normalizeForMatch(`${job.profileName || ''} ${job.name}`);
+        const matched = evidence.find((item) => this.profileKeysMatch(jobKey, item.profileKey));
+        if (!matched) {
+          // Com evidência de perfis no PDF, é melhor não mostrar requisito genérico/incorreto.
+          return { ...job, requirements: [] };
+        }
+        return {
+          ...job,
+          name: matched.fullName,
+          baseJob: matched.baseJob,
+          profileName: matched.profileName,
+          requirements: [matched.requirement],
+        };
+      }),
+    };
+  }
+
+  private extractProfileRequirementEvidence(text: string) {
+    const header = /CARGO\s*:\s*([^\n]+?)(?=\s*(?:\r?\n|REQUISITOS\s*:))/gi;
+    const matches = [...text.matchAll(header)];
+    return matches.flatMap((match, index) => {
+      const sectionStart = (match.index || 0) + match[0].length;
+      const sectionEnd = index + 1 < matches.length ? (matches[index + 1].index || text.length) : text.length;
+      const section = text.slice(sectionStart, sectionEnd);
+      const requirement = section.match(/REQUISITOS\s*:\s*([\s\S]*?)(?=DESCRI.{0,50}TAREFAS|ATRIBUI[CÇ][OÕ]ES|CARGO\s*:|$)/i)?.[1]
+        ?.replace(/\s+/g, ' ')
+        .trim();
+      const rawName = match[1].replace(/\s+/g, ' ').trim();
+      const profileMatch = rawName.match(/PERFIL\s*:\s*(.+)$/i);
+      if (!profileMatch || !requirement) return [];
+      const baseJob = rawName.slice(0, profileMatch.index).replace(/[\-–—]\s*$/u, '').trim();
+      const profileName = profileMatch[1].trim();
+      return [{
+        baseJob,
+        profileName,
+        fullName: `${baseJob} — Perfil: ${profileName}`,
+        profileKey: this.normalizeForMatch(profileName.replace(/^\d+\s*[.\-–—]?\s*/u, '')),
+        requirement,
+      }];
+    });
+  }
+
+  private normalizeForMatch(value: string) {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  private profileKeysMatch(left: string, right: string) {
+    if (!left || !right) return false;
+    if (left.includes(right) || right.includes(left)) return true;
+    const stem = (token: string) => token.replace(/s$/u, '');
+    const leftTokens = new Set(left.split(' ').filter((token) => token.length > 2).map(stem));
+    const rightTokens = right.split(' ').filter((token) => token.length > 2).map(stem);
+    const shared = rightTokens.filter((token) => leftTokens.has(token)).length;
+    return shared >= Math.min(3, Math.max(2, rightTokens.length - 1));
   }
 
   private extractJsonObject(value: string): string {
