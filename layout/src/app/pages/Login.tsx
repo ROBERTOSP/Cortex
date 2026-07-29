@@ -71,12 +71,12 @@ export function Login() {
 
   return (
     <main className="min-h-screen bg-background px-5 py-6 text-foreground sm:px-8">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
+      <div className="flex w-full items-center justify-between lg:px-4 xl:px-8">
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Voltar para a página inicial</Link>
         <Link to="/" className="flex items-center gap-2" aria-label="Cortex"><span className="h-9 w-9 overflow-hidden rounded-xl"><img src="/brand/cortex-logo.png" alt="" className="h-full w-full object-contain" /></span><strong>Cortex</strong></Link>
       </div>
 
-      <section className="mx-auto grid min-h-[calc(100vh-96px)] w-full max-w-6xl items-start gap-10 py-10 lg:grid-cols-[.95fr_1.05fr] lg:items-center">
+      <section className="grid min-h-[calc(100vh-96px)] w-full items-start gap-10 py-10 lg:grid-cols-[.95fr_1.05fr] lg:px-4 lg:items-center xl:px-8">
         <div className="hidden max-w-md lg:block">
           <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium"><Sparkles className="h-4 w-4 text-primary" /> Acesso ao seu ambiente</span>
           <h1 className="mt-6 text-5xl font-semibold leading-tight tracking-tight">Seu plano de estudos começa pelo seu objetivo.</h1>

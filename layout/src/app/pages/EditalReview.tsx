@@ -68,11 +68,11 @@ export function EditalReview() {
     }
   };
 
-  if (error && !review) return <main className="mx-auto max-w-3xl p-8 text-destructive">{error}</main>;
-  if (!review) return <main className="mx-auto max-w-3xl p-8 text-muted-foreground">Lendo seu edital…</main>;
+  if (error && !review) return <main className="w-full p-8 text-destructive">{error}</main>;
+  if (!review) return <main className="w-full p-8 text-muted-foreground">Lendo seu edital…</main>;
 
   return (
-    <main className="onboarding-light mx-auto min-h-screen max-w-6xl px-6 py-10">
+    <main className="onboarding-light min-h-screen w-full px-6 py-10 md:px-12">
       <header className="mb-6">
         <p className="text-sm font-semibold text-primary">Seu edital foi lido</p>
         <h1 className="mt-1 text-3xl font-semibold">Confira o que encontramos antes de montar seu plano</h1>

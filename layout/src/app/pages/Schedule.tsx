@@ -236,7 +236,7 @@ export function Schedule() {
   const selectedDayLabel = selectedDate ? formatDateLabel(selectedDate) : "";
 
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-8 py-8">
+    <div className="w-full px-4 py-8 md:px-8 xl:px-10">
       <div className="flex items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="mb-0.5">Cronograma</h1>

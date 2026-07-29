@@ -39,7 +39,7 @@ const features = [
 export function Landing() {
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
+      <header className="flex w-full items-center justify-between px-6 py-5 lg:px-10 xl:px-14">
         <Link to="/" className="flex items-center gap-3" aria-label="Página inicial do Cortex">
           <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl">
             <img src="/brand/cortex-logo.png" alt="" className="h-full w-full object-contain" />
@@ -61,7 +61,7 @@ export function Landing() {
         </Button>
       </header>
 
-      <section className="mx-auto grid w-full max-w-7xl gap-12 px-6 pb-20 pt-14 lg:grid-cols-[1.08fr_.92fr] lg:px-8 lg:pb-28 lg:pt-24">
+      <section className="grid w-full gap-12 px-6 pb-20 pt-14 lg:grid-cols-[1.08fr_.92fr] lg:px-10 lg:pb-28 lg:pt-24 xl:px-14">
         <div className="max-w-3xl">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-sm font-medium text-foreground">
             <Sparkles className="h-4 w-4 text-primary" />
@@ -122,7 +122,7 @@ export function Landing() {
       </section>
 
       <section id="como-funciona" className="border-y border-border bg-muted/35">
-        <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:px-8">
+        <div className="w-full px-6 py-20 lg:px-10 xl:px-14">
           <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">Como funciona</p>
           <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">Do edital ao primeiro ciclo, sem uma planilha para montar.</h2>
           <div className="mt-10 grid gap-5 md:grid-cols-3">
@@ -141,7 +141,7 @@ export function Landing() {
         </div>
       </section>
 
-      <section id="recursos" className="mx-auto w-full max-w-7xl px-6 py-20 lg:px-8">
+      <section id="recursos" className="w-full px-6 py-20 lg:px-10 xl:px-14">
         <div className="flex max-w-3xl flex-col gap-3">
           <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">Uma plataforma, não apenas um cronograma</p>
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Ferramentas para estudar, decidir e evoluir.</h2>
@@ -157,7 +157,7 @@ export function Landing() {
         </div>
       </section>
 
-      <section id="para-voce" className="mx-auto w-full max-w-7xl px-6 pb-20 lg:px-8">
+      <section id="para-voce" className="w-full px-6 pb-20 lg:px-10 xl:px-14">
         <div className="rounded-3xl bg-primary px-6 py-12 text-primary-foreground sm:px-10 lg:px-14">
           <div className="max-w-3xl">
             <BookOpenCheck className="h-7 w-7" />

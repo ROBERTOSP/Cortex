@@ -141,7 +141,7 @@ export function Dashboard() {
     "Aluno";
 
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-8 py-8">
+    <div className="w-full px-4 py-8 md:px-8 xl:px-10">
       <div className="flex items-start justify-between mb-8 gap-4">
         <div>
           <p className="text-sm text-muted-foreground mb-1">
