@@ -399,6 +399,19 @@ export class ContestsService {
     return this.findOneForUser(userId, contestId);
   }
 
+  async discardEditalDraftForUser(userId: string, contestId: string) {
+    const contest = await this.database.contest.findFirst({
+      where: { id: contestId, userId },
+      select: { id: true, status: true },
+    });
+    if (!contest) throw new NotFoundException('Concurso não encontrado');
+    if (contest.status !== 'DRAFT') throw new BadRequestException('Somente um edital em revisão pode ser substituído');
+
+    // Conserva o registro para auditoria, mas impede que o onboarding restaure esta análise antiga.
+    await this.database.contest.update({ where: { id: contestId }, data: { status: 'ARCHIVED' } });
+    return { discarded: true };
+  }
+
   async confirmEditalForUser(
     userId: string,
     contestId: string,
