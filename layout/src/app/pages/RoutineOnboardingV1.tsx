@@ -140,6 +140,8 @@ export function RoutineOnboardingV1() {
   const [processingStep, setProcessingStep] = useState(0);
   const [uploadPhase, setUploadPhase] = useState<"idle" | "sending" | "analyzing">("idle");
   const [largeText, setLargeText] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const onboardingDraftKey = "cortex-onboarding-v1-draft";
   useEffect(() => {
     const saved = localStorage.getItem("cortex-large-text") === "true";
     setLargeText(saved);
@@ -160,22 +162,31 @@ export function RoutineOnboardingV1() {
     let cancel = false;
     (async () => {
       try {
-        const s: any = await apiFetch("/routine/me/state");
+        const [s, contests] = await Promise.all([
+          apiFetch<any>("/routine/me/state"),
+          apiFetch<any[]>("/contests").catch(() => []),
+        ]);
         if (cancel) return;
+        let saved: any = null;
+        try { saved = JSON.parse(localStorage.getItem(onboardingDraftKey) || "null"); } catch {}
         if (s.studyGoal)
           setGoal((x: any) => ({
             ...x,
             ...s.studyGoal,
             examDate: s.studyGoal.examDate?.slice(0, 10) || "",
+            ...(saved?.goal || {}),
           }));
+        else if (saved?.goal) setGoal((x: any) => ({ ...x, ...saved.goal }));
         if (s.routine)
           setRoutine((x: any) => ({
             ...x,
             ...s.routine,
             timezone: s.routine.timezone || x.timezone,
+            ...(saved?.routine || {}),
           }));
+        else if (saved?.routine) setRoutine((x: any) => ({ ...x, ...saved.routine }));
         setWindows(
-          (s.availabilityWindows || []).map((w: any) => ({
+          saved?.windows?.length ? saved.windows : (s.availabilityWindows || []).map((w: any) => ({
             id: w.id,
             dayOfWeek: w.dayOfWeek,
             startTime: fmt(w.startMinute),
@@ -183,7 +194,7 @@ export function RoutineOnboardingV1() {
           })),
         );
         setCommitments(
-          (s.commitments || []).map((c: any) => ({
+          saved?.commitments?.length ? saved.commitments : (s.commitments || []).map((c: any) => ({
             id: c.id,
             category: c.category,
             dayOfWeek: c.dayOfWeek,
@@ -191,16 +202,36 @@ export function RoutineOnboardingV1() {
             endTime: fmt(c.endMinute),
           })),
         );
+        if (saved?.editalMode) setEditalMode(saved.editalMode);
+        if (saved?.catalogId) setCatalogId(saved.catalogId);
+        if (saved?.editalLink) setEditalLink(saved.editalLink);
+        const draft = contests.find((contest) => contest.status === "DRAFT");
+        if (draft) {
+          setDraftContestId(draft.id);
+          setEditalReview(draft);
+          setContestCreated(true);
+          setStep(0);
+        } else if (Number.isInteger(saved?.step)) {
+          setStep(Math.min(4, Math.max(0, saved.step)));
+        }
       } catch (e: any) {
         setError(e.message || "Não foi possível carregar suas respostas.");
       } finally {
-        if (!cancel) setLoading(false);
+        if (!cancel) { setHydrated(true); setLoading(false); }
       }
     })();
     return () => {
       cancel = true;
     };
   }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(onboardingDraftKey, JSON.stringify({
+        step, goal, routine, windows, commitments, editalMode, catalogId, editalLink,
+      }));
+    } catch {}
+  }, [hydrated, step, goal, routine, windows, commitments, editalMode, catalogId, editalLink]);
   useEffect(() => {
     apiFetch<CatalogContest[]>("/contests/catalog")
       .then(setCatalog)
@@ -211,6 +242,7 @@ export function RoutineOnboardingV1() {
       method: "PUT",
       body: JSON.stringify({
         ...goal,
+        title: goal.title || editalReview?.name || "Meu concurso",
         targetJob: goal.targetJob || "Ainda não definido",
         board: goal.board || null,
         examDate: goal.examDate || null,
@@ -298,6 +330,25 @@ export function RoutineOnboardingV1() {
     if (contest?.status === "DRAFT") { setDraftContestId(contest.id); setEditalReview(contest); }
     setContestCreated(true);
     return contest;
+  };
+  const confirmSelectedProfile = async () => {
+    if (!goal.targetJob) return;
+    if (!draftContestId) { setStep(1); return; }
+    setSaving(true);
+    setError("");
+    try {
+      await apiFetch(`/contests/${draftContestId}/confirm-edital`, {
+        method: "POST",
+        body: JSON.stringify({ selectedJob: goal.targetJob, targetJob: goal.targetJob }),
+      });
+      await saveGoal();
+      setDraftContestId(null);
+      setStep(1);
+    } catch (e: any) {
+      setError(e.message || "Não foi possível confirmar este perfil.");
+    } finally {
+      setSaving(false);
+    }
   };
   const advance = async () => {
     setError("");
@@ -426,7 +477,7 @@ export function RoutineOnboardingV1() {
                 {selectedEditalJob ? <><p className="mt-1 text-sm font-medium text-primary">{selectedEditalJob.baseJob || selectedEditalJob.name}</p><p className="mt-3 text-sm text-muted-foreground">{selectedEditalJob.taskSummary || "Selecione um perfil para conferir requisitos e matérias específicas."}</p><div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Requisitos</p><p className="mt-1 text-sm">{selectedEditalJob.requirements?.join(" · ") || "Não identificado no edital."}</p></div>{selectedEditalJob.tasks?.length ? <div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Atribuições</p><ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">{selectedEditalJob.tasks.slice(0, 6).map((task: string) => <li key={task} className="flex gap-2"><span className="text-primary">•</span><span>{task}</span></li>)}</ul></div> : null}<div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Matérias do perfil</p><ul className="mt-2 grid gap-2 text-sm">{(selectedEditalJob.subjects || []).map((subject: any) => <li key={subject.name} className="rounded-lg border bg-background px-3 py-2">{subject.name}</li>)}</ul></div></> : <p className="mt-2 text-sm text-muted-foreground">Escolha um perfil para ver requisitos, atribuições e matérias.</p>}
               </div>
             </div>
-            <div className="mt-8 flex justify-end"><Button onClick={() => setStep(1)} disabled={!goal.targetJob}>Confirmar cargo e continuar <ChevronRight /></Button></div>
+            <div className="mt-8 flex justify-end"><Button onClick={confirmSelectedProfile} disabled={!goal.targetJob || saving}>{saving ? "Salvando perfil…" : "Confirmar cargo e continuar"} <ChevronRight /></Button></div>
           </section>
         ) : step === 0 && (
           <section className="py-7">
