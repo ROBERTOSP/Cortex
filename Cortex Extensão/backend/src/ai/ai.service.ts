@@ -6,7 +6,7 @@ export type EditalExtraction = {
   board: string | null;
   organization: string | null;
   examDate: string | null;
-  jobs: Array<{ name: string; requirements: string[]; vacancies: string | null; quotas: string[]; pcd: string[]; subjects: Array<{ name: string; topics: Array<{ name: string; subtopics: string[] }> }>; notes: string[] }>;
+  jobs: Array<{ name: string; baseJob?: string | null; profileName?: string | null; requirements: string[]; taskSummary?: string | null; tasks?: string[]; vacancies: string | null; quotas: string[]; pcd: string[]; subjects: Array<{ name: string; topics: Array<{ name: string; subtopics: string[] }> }>; notes: string[] }>;
   notices: string[];
 };
 
@@ -66,8 +66,8 @@ export class AiService {
     if (!this.model) throw new Error('Serviço de análise de edital não configurado');
     const prompt = `Analise este edital brasileiro. Retorne APENAS JSON válido, sem Markdown. Não invente dados: use null ou [] quando ausente.
 Formato exato:
-{"summary":"resumo simples","board":null,"organization":null,"examDate":null,"jobs":[{"name":"","requirements":[],"vacancies":null,"quotas":[],"pcd":[],"subjects":[{"name":"","topics":[{"name":"","subtopics":[]}]}],"notes":[]}],"notices":[]}
-Regras: examDate em YYYY-MM-DD quando explícita; quotas e pcd devem registrar regras relevantes; subjects deve refletir conteúdo do cargo, incluindo conteúdo comum quando aplicável.
+{"summary":"resumo simples","board":null,"organization":null,"examDate":null,"jobs":[{"name":"Cargo-base — Perfil: nome do perfil","baseJob":"Cargo-base","profileName":"Perfil: nome do perfil","requirements":[],"taskSummary":null,"tasks":[],"vacancies":null,"quotas":[],"pcd":[],"subjects":[{"name":"","topics":[{"name":"","subtopics":[]}]}],"notes":[]}],"notices":[]}
+Regras: examDate em YYYY-MM-DD quando explícita; quotas e pcd devem registrar regras relevantes; subjects deve refletir conteúdo do cargo, incluindo conteúdo comum quando aplicável. MUITO IMPORTANTE: quando um cargo possuir perfis/especialidades (por exemplo, "Analista de TI — Perfil 1: Análise de Negócios"), retorne UMA entrada em jobs PARA CADA PERFIL. Nunca agrupe todos os perfis em um único cargo. Em cada entrada, mantenha baseJob com o cargo-base, profileName com o perfil e name com ambos. Extraia requirements, taskSummary (síntese das atribuições) e tasks (atribuições detalhadas) do perfil correto, sem misturar informações de outros perfis.
 Texto do edital:\n${text.substring(0, 24000)}`;
     try {
       const result = await this.model.generateContent(prompt);

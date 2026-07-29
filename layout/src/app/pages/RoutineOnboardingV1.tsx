@@ -348,6 +348,7 @@ export function RoutineOnboardingV1() {
   const total =
     Math.round(((preview?.weekly?.sustainableMinutes || 0) / 60) * 10) / 10;
   const blocks = preview?.weekly?.maximumBlocks || 0;
+  const selectedEditalJob = (editalReview?.editalDraft?.jobs || []).find((job: any) => job.name === goal.targetJob) as any;
   return (
     <main className="min-h-screen bg-background px-6 py-10 text-foreground md:px-12">
       <header className="mb-8 flex w-full items-start justify-between gap-5">
@@ -414,16 +415,15 @@ export function RoutineOnboardingV1() {
                 <div className="mt-3 grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                   {(editalReview.editalDraft?.jobs || []).map((job: any) => (
                     <button key={job.name} type="button" onClick={() => setGoal({ ...goal, targetJob: job.name })} className={`min-h-24 rounded-xl border p-3 text-left transition-colors ${goal.targetJob === job.name ? "border-primary bg-primary/10" : "bg-background hover:border-primary/50"}`}>
-                      <strong className="line-clamp-2 text-sm leading-5">{job.name}</strong>
-                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">Requisitos por cargo</span>
+                      <strong className="line-clamp-2 text-sm leading-5">{job.profileName || job.name}</strong>
+                      <span className="mt-1 line-clamp-1 block text-xs leading-5 text-muted-foreground">{job.baseJob || "Requisitos por cargo"}</span>
                     </button>
                   ))}
                 </div>
               </div>
               <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <h3 className="font-semibold">Matérias do cargo</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Aparecem após a seleção do cargo.</p>
-                <ul className="mt-3 grid gap-2 text-sm">{((editalReview.editalDraft?.jobs || []).find((job: any) => job.name === goal.targetJob)?.subjects || []).map((subject: any) => <li key={subject.name} className="rounded-lg border bg-background px-3 py-2">{subject.name}</li>)}</ul>
+                <h3 className="font-semibold">Informações do perfil</h3>
+                {selectedEditalJob ? <><p className="mt-1 text-sm font-medium text-primary">{selectedEditalJob.baseJob || selectedEditalJob.name}</p><p className="mt-3 text-sm text-muted-foreground">{selectedEditalJob.taskSummary || "Selecione um perfil para conferir requisitos e matérias específicas."}</p><div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Requisitos</p><p className="mt-1 text-sm">{selectedEditalJob.requirements?.join(" · ") || "Não identificado no edital."}</p></div>{selectedEditalJob.tasks?.length ? <div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Atribuições</p><ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">{selectedEditalJob.tasks.slice(0, 6).map((task: string) => <li key={task} className="flex gap-2"><span className="text-primary">•</span><span>{task}</span></li>)}</ul></div> : null}<div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Matérias do perfil</p><ul className="mt-2 grid gap-2 text-sm">{(selectedEditalJob.subjects || []).map((subject: any) => <li key={subject.name} className="rounded-lg border bg-background px-3 py-2">{subject.name}</li>)}</ul></div></> : <p className="mt-2 text-sm text-muted-foreground">Escolha um perfil para ver requisitos, atribuições e matérias.</p>}
               </div>
             </div>
             <div className="mt-8 flex justify-end"><Button onClick={() => setStep(1)} disabled={!goal.targetJob}>Confirmar cargo e continuar <ChevronRight /></Button></div>
