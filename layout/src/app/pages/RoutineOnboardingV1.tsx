@@ -415,7 +415,7 @@ export function RoutineOnboardingV1() {
                   {(editalReview.editalDraft?.jobs || []).map((job: any) => (
                     <button key={job.name} type="button" onClick={() => setGoal({ ...goal, targetJob: job.name })} className={`min-h-24 rounded-xl border p-3 text-left transition-colors ${goal.targetJob === job.name ? "border-primary bg-primary/10" : "bg-background hover:border-primary/50"}`}>
                       <strong className="line-clamp-2 text-sm leading-5">{job.name}</strong>
-                      <span className="mt-1 line-clamp-2 block text-xs leading-5 text-muted-foreground">{job.requirements?.join(" · ") || "Requisitos disponíveis no edital"}</span>
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">Requisitos por cargo</span>
                     </button>
                   ))}
                 </div>
