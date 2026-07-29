@@ -228,7 +228,7 @@ export class ContestsService {
       const parser = new PDFParse({ data: file.buffer });
       const data = await parser.getText();
       await parser.destroy();
-      const text = this.selectRelevantEditalText((data as any).pages, data.text);
+      const text = data.text;
 
       return this.createForUser(userId, {
         name: meta?.name,

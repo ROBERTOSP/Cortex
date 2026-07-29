@@ -65,11 +65,12 @@ export class AiService {
 
   async extractEditalDetails(text: string): Promise<EditalExtraction> {
     if (!this.model) throw new Error('Serviço de análise de edital não configurado');
+    const analysisText = this.selectStructuredEditalSections(text);
     const prompt = `Analise este edital brasileiro. Retorne APENAS JSON válido, sem Markdown. Não invente dados: use null ou [] quando ausente.
 Formato exato:
 {"summary":"resumo simples","board":null,"organization":null,"examDate":null,"generalEligibilityRequirements":[],"jobs":[{"name":"Cargo-base — Perfil: nome do perfil","baseJob":"Cargo-base","profileName":"Perfil: nome do perfil","requirements":[],"taskSummary":null,"tasks":[],"vacancies":null,"quotas":[],"pcd":[],"subjects":[{"name":"","topics":[{"name":"","subtopics":[]}]}],"notes":[]}],"notices":[]}
 Regras: examDate em YYYY-MM-DD quando explícita; quotas e pcd devem registrar regras relevantes; subjects deve refletir conteúdo do cargo, incluindo conteúdo comum quando aplicável. MUITO IMPORTANTE: quando um cargo possuir perfis/especialidades (por exemplo, "Analista de TI — Perfil 1: Análise de Negócios"), retorne UMA entrada em jobs PARA CADA PERFIL. Nunca agrupe todos os perfis em um único cargo. Em cada entrada, mantenha baseJob com o cargo-base, profileName com o perfil e name com ambos. Extraia requirements, taskSummary (síntese das atribuições) e tasks (atribuições detalhadas) SOMENTE do bloco que vem imediatamente após o título daquele Cargo/Perfil. Nunca copie requisitos gerais de admissão para jobs[].requirements. Itens como aprovação/classificação, nacionalidade, idade mínima, direitos políticos, obrigações eleitorais/militares, aptidão física/mental, antecedentes criminais, acúmulo de cargos e aposentadoria são gerais: guarde-os apenas em generalEligibilityRequirements. Se um requisito do perfil tiver parte geral e específica, mantenha em requirements somente graduação, registro profissional, conselho de classe, OAB, habilitação ou experiência.
-Texto do edital:\n${text.substring(0, 24000)}`;
+Texto do edital:\n${analysisText}`;
     try {
       const result = await this.model.generateContent(prompt);
       const jsonText = (await result.response).text().replace(/```json|```/g, '').trim();
@@ -82,32 +83,45 @@ Texto do edital:\n${text.substring(0, 24000)}`;
     }
   }
 
+  private selectStructuredEditalSections(text: string) {
+    const normalized = text.replace(/\r/g, '');
+    const programStart = normalized.search(/ANEXO\s+I\b[\s–-]*CONTE[ÚU]DO\s+PROGRAMÁTICO/i);
+    const requirementsStart = normalized.search(/ANEXO\s+II\b[\s–-]*REQUISITOS/i);
+    const metadata = normalized.slice(0, Math.min(normalized.length, 35_000));
+    const program = programStart >= 0
+      ? normalized.slice(programStart, requirementsStart > programStart ? requirementsStart : undefined)
+      : '';
+    return `${metadata}\n\n${program}`.slice(0, 140_000);
+  }
+
   private applyProfileRequirementEvidence(data: EditalExtraction, text: string): EditalExtraction {
     const evidence = this.extractProfileRequirementEvidence(text);
     if (evidence.length === 0) return data;
 
+    const jobs = evidence.map((item) => {
+      const aiJob = data.jobs.find((job) => this.profileKeysMatch(
+        this.normalizeForMatch(`${job.profileName || ''} ${job.name}`),
+        item.profileKey,
+      ));
+      return {
+        ...(aiJob || { vacancies: null, quotas: [], pcd: [], subjects: [], notes: [] }),
+        name: item.fullName,
+        baseJob: item.baseJob,
+        profileName: item.profileName,
+        requirements: [item.requirement],
+      };
+    });
+
     return {
       ...data,
-      jobs: data.jobs.map((job) => {
-        const jobKey = this.normalizeForMatch(`${job.profileName || ''} ${job.name}`);
-        const matched = evidence.find((item) => this.profileKeysMatch(jobKey, item.profileKey));
-        if (!matched) {
-          // Com evidência de perfis no PDF, é melhor não mostrar requisito genérico/incorreto.
-          return { ...job, requirements: [] };
-        }
-        return {
-          ...job,
-          name: matched.fullName,
-          baseJob: matched.baseJob,
-          profileName: matched.profileName,
-          requirements: [matched.requirement],
-        };
-      }),
+      jobs,
     };
   }
 
   private extractProfileRequirementEvidence(text: string) {
-    const header = /CARGO\s*:\s*([^\n]+?)(?=\s*(?:\r?\n|REQUISITOS\s*:))/gi;
+    // Alguns PDFs quebram o nome do perfil em mais de uma linha. O delimitador confiável
+    // é o rótulo "Requisitos", que vem imediatamente após o título do cargo/perfil.
+    const header = /(?:^|\n)\s*CARGO(?:\s*:\s*|\s+(?=ANALISTA\s))([\s\S]*?)(?=\s*REQUISITOS\s*:)/gi;
     const matches = [...text.matchAll(header)];
     return matches.flatMap((match, index) => {
       const sectionStart = (match.index || 0) + match[0].length;
@@ -118,9 +132,18 @@ Texto do edital:\n${text.substring(0, 24000)}`;
         .trim();
       const rawName = match[1].replace(/\s+/g, ' ').trim();
       const profileMatch = rawName.match(/PERFIL\s*:\s*(.+)$/i);
-      if (!profileMatch || !requirement) return [];
+      if (!requirement) return [];
+      if (!profileMatch) {
+        return [{
+          baseJob: rawName,
+          profileName: rawName,
+          fullName: rawName,
+          profileKey: this.normalizeForMatch(rawName.replace(/^\d+\s*[.\-–—]?\s*/u, '')),
+          requirement,
+        }];
+      }
       const baseJob = rawName.slice(0, profileMatch.index).replace(/[\-–—]\s*$/u, '').trim();
-      const profileName = profileMatch[1].trim();
+      const profileName = profileMatch ? profileMatch[1].trim() : rawName;
       return [{
         baseJob,
         profileName,
