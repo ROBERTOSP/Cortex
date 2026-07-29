@@ -414,9 +414,10 @@ export function RoutineOnboardingV1() {
                 <div className="flex items-baseline justify-between gap-3"><h3 className="font-semibold">Cargos identificados</h3><span className="text-sm text-muted-foreground">Escolha o cargo pretendido</span></div>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                   {(editalReview.editalDraft?.jobs || []).map((job: any) => (
-                    <button key={job.name} type="button" onClick={() => setGoal({ ...goal, targetJob: job.name })} className={`min-h-24 rounded-xl border p-3 text-left transition-colors ${goal.targetJob === job.name ? "border-primary bg-primary/10" : "bg-background hover:border-primary/50"}`}>
+                    <button key={job.name} type="button" onClick={() => setGoal({ ...goal, targetJob: job.name })} className={`rounded-xl border p-3 text-left transition-colors ${goal.targetJob === job.name ? "border-primary bg-primary/10" : "bg-background hover:border-primary/50"}`}>
                       <strong className="line-clamp-2 text-sm leading-5">{job.profileName || job.name}</strong>
-                      <span className="mt-1 line-clamp-1 block text-xs leading-5 text-muted-foreground">{job.baseJob || "Requisitos por cargo"}</span>
+                      <span className="mt-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Requisitos por cargo</span>
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">{job.requirements?.join(" · ") || "Requisito não identificado no edital."}</span>
                     </button>
                   ))}
                 </div>
