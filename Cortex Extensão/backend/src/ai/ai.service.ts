@@ -97,25 +97,81 @@ Texto do edital:\n${analysisText}`;
   private applyProfileRequirementEvidence(data: EditalExtraction, text: string): EditalExtraction {
     const evidence = this.extractProfileRequirementEvidence(text);
     if (evidence.length === 0) return data;
+    const subjectsByProfile = this.extractProgramSubjectsByProfile(text);
 
     const jobs = evidence.map((item) => {
       const aiJob = data.jobs.find((job) => this.profileKeysMatch(
         this.normalizeForMatch(`${job.profileName || ''} ${job.name}`),
         item.profileKey,
       ));
+      const extractedSubjects = subjectsByProfile.find((subjectSet) => this.profileKeysMatch(subjectSet.profileKey, item.profileKey))?.subjects || [];
       return {
         ...(aiJob || { vacancies: null, quotas: [], pcd: [], subjects: [], notes: [] }),
         name: item.fullName,
         baseJob: item.baseJob,
         profileName: item.profileName,
         requirements: [item.requirement],
+        subjects: extractedSubjects.length ? extractedSubjects : (aiJob?.subjects || []),
       };
     });
 
     return {
       ...data,
+      board: data.board || this.detectBoard(text),
       jobs,
     };
+  }
+
+  private detectBoard(text: string) {
+    const boards: Array<[RegExp, string]> = [
+      [/FUNDA[CÇ][AÃ]O\s+GETULIO\s+VARGAS|\bFGV\b/i, 'Fundação Getulio Vargas - FGV'],
+      [/\bCEBRASPE\b|\bCESPE\b/i, 'Cebraspe'],
+      [/FUNDA[CÇ][AÃ]O\s+CARLOS\s+CHAGAS|\bFCC\b/i, 'Fundação Carlos Chagas - FCC'],
+      [/\bVUNESP\b/i, 'Vunesp'],
+      [/\bIBFC\b/i, 'IBFC'],
+    ];
+    return boards.find(([pattern]) => pattern.test(text))?.[1] || null;
+  }
+
+  private extractProgramSubjectsByProfile(text: string) {
+    const normalized = text.replace(/\r/g, '');
+    const start = normalized.search(/ANEXO\s+I\b[\s–-]*CONTE[ÚU]DO\s+PROGRAMÁTICO/i);
+    const end = normalized.search(/ANEXO\s+II\b[\s–-]*REQUISITOS/i);
+    if (start < 0) return [] as Array<{ profileKey: string; subjects: EditalExtraction['jobs'][number]['subjects'] }>;
+    const program = normalized.slice(start, end > start ? end : undefined);
+    const moduleTwo = program.search(/MODULO\s+II\s*[-–]\s*CONHECIMENTOS\s+ESPEC[IÍ]FICOS/i);
+    const general = this.extractSubjectsFromSection(moduleTwo > 0 ? program.slice(0, moduleTwo) : '');
+    const headers = [...program.matchAll(/(?:^|\n)\s*PERFIL\s*(\d+)\s*[:–-]\s*([^\n]+)/gi)];
+    return headers.map((header, index) => {
+      const sectionStart = (header.index || 0) + header[0].length;
+      const sectionEnd = index + 1 < headers.length ? (headers[index + 1].index || program.length) : program.length;
+      return {
+        profileKey: this.normalizeForMatch(header[2].replace(/^\d+\s*[.\-–—]?\s*/u, '')),
+        subjects: this.mergeSubjects(general, this.extractSubjectsFromSection(program.slice(sectionStart, sectionEnd))),
+      };
+    });
+  }
+
+  private extractSubjectsFromSection(section: string): EditalExtraction['jobs'][number]['subjects'] {
+    const matches = [...section.matchAll(/(?:^|\n)\s*([A-ZÀ-Ü][A-ZÀ-Ü0-9 /&().,'-]{2,}):/g)];
+    return matches.map((match, index) => {
+      const name = match[1].replace(/\s+/g, ' ').trim();
+      const bodyStart = (match.index || 0) + match[0].length;
+      const bodyEnd = index + 1 < matches.length ? (matches[index + 1].index || section.length) : section.length;
+      const topics = [...section.slice(bodyStart, bodyEnd).matchAll(/(?:^|\s)(\d+(?:\.\d+)?\s+[^.;\n]{3,110})/g)]
+        .slice(0, 40).map((topic) => ({ name: topic[1].replace(/\s+/g, ' ').trim(), subtopics: [] }));
+      return { name, topics };
+    }).filter((subject) => !/^(PERFIL|MODULO|ANEXO)/i.test(subject.name));
+  }
+
+  private mergeSubjects(...sets: EditalExtraction['jobs'][number]['subjects'][]) {
+    const seen = new Set<string>();
+    return sets.flat().filter((subject) => {
+      const key = this.normalizeForMatch(subject.name);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   private extractProfileRequirementEvidence(text: string) {
