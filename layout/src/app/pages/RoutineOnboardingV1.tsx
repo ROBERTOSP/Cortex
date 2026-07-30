@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  LogOut,
   Moon,
   Plus,
   Sun,
@@ -17,6 +18,7 @@ import { Checkbox } from "../components/ui/checkbox";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { apiFetch } from "../lib/api";
+import { useAuth } from "../auth/AuthContext";
 
 type Day = "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
 type Window = {
@@ -97,6 +99,7 @@ function Choice({
 
 export function RoutineOnboardingV1() {
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
   const { theme, setTheme } = useTheme();
   const [step, setStep] = useState(0),
     [loading, setLoading] = useState(true),
@@ -408,6 +411,8 @@ export function RoutineOnboardingV1() {
         {step === 0 ? <><p className="text-sm font-medium text-primary">Etapa 1 · Análise do edital</p><h1 className="mt-2 text-3xl font-semibold">Vamos entender seu concurso</h1><p className="mt-2 text-muted-foreground">Envie o edital. O Cortex identifica cargos, datas, regras da prova e conteúdo programático para montar seu plano.</p></> : <><p className="flex items-center gap-2 text-sm font-medium text-primary"><Clock3 className="size-4" />Leva cerca de 3 minutos</p><h1 className="mt-2 text-3xl font-semibold">Vamos conhecer sua rotina</h1><p className="mt-2 text-muted-foreground">Poucas respostas agora ajudam a criar um plano que caiba na sua vida.</p></>}
         </div>
         <div className="flex shrink-0 items-center gap-2" aria-label="Preferências de acessibilidade">
+          {user?.role === "ADMIN" && <Button type="button" variant="outline" size="sm" onClick={() => navigate("/app/admin/editais")}>Painel Admin</Button>}
+          <Button type="button" variant="ghost" size="sm" onClick={() => { logout(); navigate("/login"); }}><LogOut /> <span className="hidden sm:inline">Sair</span></Button>
           <Button type="button" variant="outline" size="sm" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Alternar modo claro e escuro" title="Alternar modo claro e escuro">{theme === "dark" ? <Sun /> : <Moon />}</Button>
           <Button type="button" variant="outline" size="sm" onClick={toggleLargeText} aria-pressed={largeText} aria-label="Alternar texto ampliado" title="Ampliar tamanho do texto"><Type /> <span className="hidden sm:inline">Texto</span></Button>
         </div>
@@ -416,8 +421,8 @@ export function RoutineOnboardingV1() {
         <div className="grid grid-cols-[auto_1fr_auto] items-end gap-3 border-b pb-5">
           <Button
             variant="outline"
-            onClick={() => setStep(Math.max(0, step - 1))}
-            disabled={step === 0 || saving}
+            onClick={() => step === 0 ? navigate("/") : setStep(step - 1)}
+            disabled={saving}
           >
             <ChevronLeft />
             Voltar

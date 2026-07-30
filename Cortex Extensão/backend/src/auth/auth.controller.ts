@@ -71,7 +71,7 @@ export class AuthController {
 
     const user = await this.database.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, name: true, avatarUrl: true },
+      select: { id: true, email: true, name: true, avatarUrl: true, role: true },
     });
 
     if (!user) {
