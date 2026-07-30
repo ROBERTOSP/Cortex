@@ -289,7 +289,7 @@ model SharedEdital {
   id          String   @id @default(uuid())
   title       String
   board       String?
-  examDate    DateTime?
+  examDate    DateTime? @map("exam_date")
   status      String   @default("DRAFT")
   extraction  Json?
   sourceText  String?  @map("source_text")
