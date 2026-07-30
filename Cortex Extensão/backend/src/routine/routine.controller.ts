@@ -229,6 +229,18 @@ export class RoutineController {
     });
   }
 
+  @Post('me/strategic-preview')
+  strategicPreview(@Req() req, @Body() body: Record<string, unknown>) {
+    const userId = String(req.user?.sub || '');
+    if (!userId) throw new UnauthorizedException();
+
+    return this.routineService.strategicPreview(userId, {
+      weekStartDate: typeof body.weekStartDate === 'string' ? body.weekStartDate : '',
+      checkInDateKey:
+        typeof body.checkInDateKey === 'string' ? body.checkInDateKey : null,
+    });
+  }
+
   @Post('me/complete')
   complete(@Req() req) {
     const userId = String(req.user?.sub || '');

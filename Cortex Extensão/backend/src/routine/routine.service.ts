@@ -455,6 +455,142 @@ export class RoutineService {
     };
   }
 
+  async strategicPreview(userId: string, payload: PreviewWeekPayload) {
+    const capacity = await this.previewWeek(userId, payload);
+    const contest = await this.database.contest.findFirst({
+      where: { userId, status: { not: 'ARCHIVED' } },
+      orderBy: { updatedAt: 'desc' },
+      include: { nodes: true },
+    });
+
+    const preview = capacity.preview;
+    const subjects = (contest?.nodes || []).filter((node) => node.type === 'SUBJECT');
+    const topics = (contest?.nodes || []).filter((node) => node.type === 'TOPIC');
+    const subtopics = (contest?.nodes || []).filter((node) => node.type === 'SUBTOPIC');
+    const preferredSessionMinutes =
+      capacity.routine.preferredSessionMinutes ?? ROUTINE_ENGINE_LIMITS.sessionMinutes.max;
+    const weeklyMinutes = preview.weekly.sustainableMinutes;
+    const examDate = contest?.examDate || capacity.studyGoal?.examDate || null;
+    const now = new Date();
+    const daysUntilExam = examDate
+      ? Math.max(0, Math.ceil((examDate.getTime() - now.getTime()) / 86_400_000))
+      : null;
+    const weeksUntilExam =
+      daysUntilExam == null ? null : Math.max(1, Math.ceil(daysUntilExam / 7));
+    const studyUnits = Math.max(topics.length, subjects.length);
+    const estimatedInitialPassMinutes = studyUnits * preferredSessionMinutes;
+    const estimatedInitialPassWeeks =
+      weeklyMinutes > 0 ? Math.max(1, Math.ceil(estimatedInitialPassMinutes / weeklyMinutes)) : null;
+
+    let feasibilityStatus = 'NO_DATE';
+    let feasibilityLabel = 'Defina a data da prova';
+    let feasibilitySummary =
+      'Com a data da prova, o Cortex consegue medir o ritmo necessário até o exame.';
+    if (weeklyMinutes <= 0) {
+      feasibilityStatus = 'NO_CAPACITY';
+      feasibilityLabel = 'Capacidade ainda não calculada';
+      feasibilitySummary = 'Revise os horários disponíveis para gerar uma base semanal.';
+    } else if (weeksUntilExam != null && estimatedInitialPassWeeks != null) {
+      if (estimatedInitialPassWeeks > weeksUntilExam) {
+        feasibilityStatus = 'CRITICAL';
+        feasibilityLabel = 'O prazo pede priorização';
+        feasibilitySummary =
+          'Não há espaço para tratar todo o conteúdo da mesma forma. O plano deve concentrar esforço no que tem maior impacto.';
+      } else if (estimatedInitialPassWeeks > weeksUntilExam * 0.65) {
+        feasibilityStatus = 'ATTENTION';
+        feasibilityLabel = 'Plano viável com atenção';
+        feasibilitySummary =
+          'Há tempo para uma primeira cobertura, mas revisões e questões precisarão ser bem distribuídas.';
+      } else {
+        feasibilityStatus = 'VIABLE';
+        feasibilityLabel = 'Você tem uma base viável';
+        feasibilitySummary =
+          'Sua capacidade atual permite cobrir o conteúdo e reservar espaço para revisão e prática.';
+      }
+    }
+
+    const topicCountBySubject = new Map<string, number>();
+    for (const topic of topics) {
+      if (topic.parentId) {
+        topicCountBySubject.set(
+          topic.parentId,
+          (topicCountBySubject.get(topic.parentId) || 0) + 1,
+        );
+      }
+    }
+    const weightedSubjects = subjects.map((subject) => {
+      const topicCount = topicCountBySubject.get(subject.id) || 0;
+      const hasBoardEvidence =
+        subject.strategicPriority > 0 && subject.priorityCalculatedAt != null;
+      return {
+        subject,
+        topicCount,
+        hasBoardEvidence,
+        weight: hasBoardEvidence ? subject.strategicPriority : Math.max(topicCount, 1),
+      };
+    });
+    const totalWeight = weightedSubjects.reduce((sum, item) => sum + item.weight, 0);
+    const recommendations = weightedSubjects
+      .map((item) => {
+        const recommendedWeeklyMinutes =
+          totalWeight > 0 ? Math.round((weeklyMinutes * item.weight) / totalWeight) : 0;
+        return {
+          subjectId: item.subject.id,
+          subject: item.subject.name,
+          topicCount: item.topicCount,
+          strategicPriority: Math.round(item.subject.strategicPriority),
+          recommendedWeeklyMinutes,
+          recommendedBlocks:
+            recommendedWeeklyMinutes > 0
+              ? Math.max(1, Math.round(recommendedWeeklyMinutes / preferredSessionMinutes))
+              : 0,
+          basis: item.hasBoardEvidence ? 'BOARD_INCIDENCE' : 'CONTENT_VOLUME',
+          reason: item.hasBoardEvidence
+            ? 'Prioridade calculada pelo perfil da banca e pela incidência disponível.'
+            : 'Distribuição inicial pelo volume de tópicos; será refinada pelo seu desempenho.',
+        };
+      })
+      .sort((a, b) => b.recommendedWeeklyMinutes - a.recommendedWeeklyMinutes);
+
+    return {
+      ...capacity,
+      strategy: {
+        contest: contest
+          ? {
+              id: contest.id,
+              name: contest.name,
+              targetJob: contest.selectedJob || contest.targetJob,
+              board: contest.board,
+            }
+          : null,
+        exam: {
+          date: examDate,
+          daysUntilExam,
+          weeksUntilExam,
+        },
+        content: {
+          subjectCount: subjects.length,
+          topicCount: topics.length,
+          subtopicCount: subtopics.length,
+          estimatedInitialPassMinutes,
+          estimatedInitialPassWeeks,
+        },
+        feasibility: {
+          status: feasibilityStatus,
+          label: feasibilityLabel,
+          summary: feasibilitySummary,
+          capacityUntilExamMinutes:
+            weeksUntilExam == null ? null : weeklyMinutes * weeksUntilExam,
+        },
+        preferredSessionMinutes,
+        recommendations,
+        hasBoardEvidence: recommendations.some(
+          (item) => item.basis === 'BOARD_INCIDENCE',
+        ),
+      },
+    };
+  }
+
   async completeOnboarding(userId: string) {
     const goal = await this.database.studyGoal.findUnique({ where: { userId } });
     if (!goal) throw new BadRequestException('StudyGoal obrigatório.');

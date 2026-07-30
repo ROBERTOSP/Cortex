@@ -413,14 +413,14 @@ export function RoutineOnboardingV1() {
       if (step === 2) await saveWindows();
       if (step === 3) {
         await saveCommitments();
-        const r: any = await apiFetch("/routine/me/preview-week", {
+        const r: any = await apiFetch("/routine/me/strategic-preview", {
           method: "POST",
           body: JSON.stringify({
             weekStartDate: monday(),
             checkInDateKey: null,
           }),
         });
-        setPreview(r.preview);
+        setPreview(r);
       }
       if (step < 4) setStep(step + 1);
       else {
@@ -437,9 +437,11 @@ export function RoutineOnboardingV1() {
     return (
       <div className="p-8 text-muted-foreground">Carregando sua rotina…</div>
     );
+  const capacity = preview?.preview || preview;
+  const strategy = preview?.strategy;
   const total =
-    Math.round(((preview?.weekly?.sustainableMinutes || 0) / 60) * 10) / 10;
-  const blocks = preview?.weekly?.maximumBlocks || 0;
+    Math.round(((capacity?.weekly?.sustainableMinutes || 0) / 60) * 10) / 10;
+  const blocks = capacity?.weekly?.maximumBlocks || 0;
   const selectedEditalJob = (editalReview?.editalDraft?.jobs || []).find((job: any) => job.name === goal.targetJob) as any;
   const selectedSubjectCount = selectedEditalJob?.subjects?.length || 0;
   const selectedTopicCount = (selectedEditalJob?.subjects || []).reduce((total: number, subject: any) => total + (subject.topics?.length || 0), 0);
@@ -846,51 +848,201 @@ export function RoutineOnboardingV1() {
         {step === 4 && (
           <section className="py-7">
             <p className="text-sm font-semibold text-primary">
-              Sua capacidade inicial
+              Etapa 5 · Sua estratégia inicial
             </p>
-            <h2 className="mt-1 text-2xl font-semibold">
-              Uma rotina possível para começar
+            <h2 className="mt-1 text-3xl font-semibold">
+              Seu plano já tem um ponto de partida
             </h2>
-            <p className="mt-2 text-muted-foreground">
-              Calculamos com base nos horários que você informou.
+            <p className="mt-2 max-w-4xl text-muted-foreground">
+              Cruzamos o conteúdo do cargo com seu prazo e com o tempo que cabe
+              na sua rotina. Esta distribuição continuará melhorando conforme
+              você estuda.
             </p>
             {preview && (
-              <div className="mt-7 grid gap-3 md:grid-cols-3">
-                <Card className="p-5">
-                  <span className="text-sm text-muted-foreground">
-                    Tempo disponível por semana
+              <>
+                <div
+                  className={`mt-7 rounded-2xl border p-5 ${
+                    strategy?.feasibility?.status === "CRITICAL"
+                      ? "border-destructive/40 bg-destructive/10"
+                      : strategy?.feasibility?.status === "ATTENTION"
+                        ? "border-amber-500/40 bg-amber-500/10"
+                        : "border-primary/40 bg-primary/10"
+                  }`}
+                >
+                  <span className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Leitura do cenário
                   </span>
-                  <strong className="mt-2 block text-3xl">{total}h</strong>
-                </Card>
-                <Card className="p-5">
-                  <span className="text-sm text-muted-foreground">
-                    Blocos estimados
-                  </span>
-                  <strong className="mt-2 block text-3xl">{blocks}</strong>
-                </Card>
-                <Card className="p-5">
-                  <span className="text-sm text-muted-foreground">
-                    Melhor período
-                  </span>
-                  <strong className="mt-2 block text-3xl">
+                  <h3 className="mt-1 text-xl font-semibold">
+                    {strategy?.feasibility?.label ||
+                      "Sua capacidade foi calculada"}
+                  </h3>
+                  <p className="mt-1 max-w-4xl text-sm text-muted-foreground">
+                    {strategy?.feasibility?.summary ||
+                      "O Cortex usará esta capacidade como base para montar sua rotina."}
+                  </p>
+                </div>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                  {[
                     {
-                      (
-                        {
-                          MORNING: "Manhã",
-                          AFTERNOON: "Tarde",
-                          EVENING: "Noite",
-                          NIGHT: "Madrugada",
-                        } as any
-                      )[routine.peakEnergyPeriod]
-                    }
-                  </strong>
-                </Card>
-              </div>
+                      label: "Até a prova",
+                      value:
+                        strategy?.exam?.daysUntilExam != null
+                          ? `${strategy.exam.daysUntilExam} dias`
+                          : "A definir",
+                    },
+                    { label: "Capacidade semanal", value: `${total}h` },
+                    { label: "Blocos por semana", value: blocks },
+                    {
+                      label: "Matérias",
+                      value: strategy?.content?.subjectCount || 0,
+                    },
+                    {
+                      label: "Tópicos mapeados",
+                      value: strategy?.content?.topicCount || 0,
+                    },
+                  ].map((metric) => (
+                    <Card key={metric.label} className="p-5">
+                      <span className="text-sm text-muted-foreground">
+                        {metric.label}
+                      </span>
+                      <strong className="mt-2 block text-3xl">
+                        {metric.value}
+                      </strong>
+                    </Card>
+                  ))}
+                </div>
+
+                <div className="mt-7 grid gap-7 xl:grid-cols-[1.4fr_0.8fr]">
+                  <div>
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <h3 className="text-xl font-semibold">
+                          Distribuição inicial por matéria
+                        </h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Minutos e blocos sugeridos para uma semana sustentável.
+                        </p>
+                      </div>
+                      {!strategy?.hasBoardEvidence &&
+                        strategy?.recommendations?.length > 0 && (
+                          <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                            Prioridade inicial por volume de conteúdo
+                          </span>
+                        )}
+                    </div>
+                    <div className="mt-4 overflow-hidden rounded-2xl border">
+                      {(strategy?.recommendations || []).length > 0 ? (
+                        <div className="divide-y">
+                          {strategy.recommendations.map(
+                            (item: any, index: number) => (
+                              <div
+                                key={item.subjectId || item.subject}
+                                className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_110px_90px]"
+                              >
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-3">
+                                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                                      {index + 1}
+                                    </span>
+                                    <strong>{item.subject}</strong>
+                                  </div>
+                                  <p className="mt-2 text-xs text-muted-foreground">
+                                    {item.topicCount} tópicos · {item.reason}
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-xs text-muted-foreground">
+                                    Por semana
+                                  </span>
+                                  <strong className="block">
+                                    {item.recommendedWeeklyMinutes >= 60
+                                      ? `${Math.floor(item.recommendedWeeklyMinutes / 60)}h ${item.recommendedWeeklyMinutes % 60}min`
+                                      : `${item.recommendedWeeklyMinutes} min`}
+                                  </strong>
+                                </div>
+                                <div>
+                                  <span className="text-xs text-muted-foreground">
+                                    Blocos
+                                  </span>
+                                  <strong className="block">
+                                    {item.recommendedBlocks}
+                                  </strong>
+                                </div>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      ) : (
+                        <p className="p-5 text-sm text-muted-foreground">
+                          O edital selecionado ainda não possui matérias
+                          estruturadas para este cargo. A capacidade foi
+                          calculada, mas a distribuição depende desse conteúdo.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xl font-semibold">Mapa da semana</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Capacidade líquida depois dos compromissos.
+                    </p>
+                    <div className="mt-4 space-y-2">
+                      {(capacity?.days || []).map((day: any) => {
+                        const label =
+                          days.find(([value]) => value === day.dayOfWeek)?.[1] ||
+                          day.dayOfWeek;
+                        const percentage =
+                          capacity?.weekly?.sustainableMinutes > 0
+                            ? Math.max(
+                                4,
+                                Math.round(
+                                  (day.sustainableMinutes /
+                                    capacity.weekly.sustainableMinutes) *
+                                    100,
+                                ),
+                              )
+                            : 0;
+                        return (
+                          <div key={day.dateKey} className="rounded-xl border p-3">
+                            <div className="flex items-center justify-between gap-3 text-sm">
+                              <span className="font-medium">{label}</span>
+                              <span className="text-muted-foreground">
+                                {day.sustainableMinutes
+                                  ? `${Math.floor(day.sustainableMinutes / 60)}h ${day.sustainableMinutes % 60}min`
+                                  : "Sem bloco"}
+                              </span>
+                            </div>
+                            <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className="h-full rounded-full bg-primary"
+                                style={{ width: `${Math.min(100, percentage)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-7 rounded-2xl bg-muted p-5">
+                  <h3 className="font-semibold">Como chegamos a esta base</h3>
+                  <ul className="mt-3 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+                    <li>• Disponibilidade menos compromissos informados.</li>
+                    <li>
+                      • Sessões de {strategy?.preferredSessionMinutes || 0} minutos.
+                    </li>
+                    <li>
+                      • {strategy?.content?.subjectCount || 0} matérias e{" "}
+                      {strategy?.content?.topicCount || 0} tópicos do cargo.
+                    </li>
+                    <li>• Prazo e data da prova publicados no edital.</li>
+                  </ul>
+                </div>
+              </>
             )}
-            <p className="mt-7 rounded-2xl bg-muted p-4 text-sm text-muted-foreground">
-              Você poderá editar horários e preferências quando precisar. O
-              importante é começar com algo possível.
-            </p>
           </section>
         )}
       </div>
