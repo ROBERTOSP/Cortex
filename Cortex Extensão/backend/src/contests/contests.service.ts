@@ -256,6 +256,8 @@ export class ContestsService {
       editalSource?: EditalSource;
       editalSourceUrl?: string;
       extraction?: EditalExtraction;
+      participationMode?: string;
+      highlightPcdRules?: boolean;
     },
   ) {
     const name = (data.name || '').trim();
@@ -278,7 +280,8 @@ export class ContestsService {
     const templateExtraction = sharedTemplate?.extraction as unknown as EditalExtraction | null;
 
     const extraction = data.extraction || templateExtraction || (editalText ? await this.ai.extractEditalDetails(editalText) : null);
-    const structure = { subjects: [] as StructuredSubject[] };
+    const selectedJob = extraction?.jobs?.find((job) => job.name === targetJob);
+    const structure = { subjects: (selectedJob?.subjects || []) as StructuredSubject[] };
 
     const resolvedName = name || sharedTemplate?.title || 'Plano Personalizado';
     const resolvedBoard = board || extraction?.board || sharedTemplate?.board || 'Banca não informada';
@@ -299,6 +302,8 @@ export class ContestsService {
         editalDraft: needsReview && extraction ? extraction : undefined,
         editalExtractedAt: needsReview ? new Date() : null,
         editalConfirmedAt: needsReview ? null : new Date(),
+        participationMode: data.participationMode || null,
+        highlightPcdRules: data.highlightPcdRules ?? null,
       },
     });
 
@@ -513,7 +518,7 @@ export class ContestsService {
   async confirmEditalForUser(
     userId: string,
     contestId: string,
-    data: { name?: string; targetJob?: string; selectedJob?: string; board?: string; examDate?: string; subjects?: unknown },
+    data: { name?: string; targetJob?: string; selectedJob?: string; board?: string; examDate?: string; participationMode?: string; highlightPcdRules?: boolean; subjects?: unknown },
   ) {
     const contest = await this.database.contest.findFirst({ where: { id: contestId, userId } });
     if (!contest) throw new NotFoundException('Concurso não encontrado');
@@ -538,6 +543,8 @@ export class ContestsService {
         selectedJob,
         board: (data.board || contest.board).trim(),
         examDate: data.examDate ? new Date(data.examDate) : contest.examDate,
+        participationMode: data.participationMode || contest.participationMode,
+        highlightPcdRules: data.highlightPcdRules ?? contest.highlightPcdRules,
         status: 'ACTIVE',
         editalDraft: draft,
         editalConfirmedAt: new Date(),

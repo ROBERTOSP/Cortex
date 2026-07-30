@@ -315,6 +315,8 @@ model Contest {
   editalExtractedAt DateTime? @map("edital_extracted_at")
   editalConfirmedAt DateTime? @map("edital_confirmed_at")
   selectedJob       String?  @map("selected_job")
+  participationMode String?  @map("participation_mode")
+  highlightPcdRules Boolean? @map("highlight_pcd_rules")
   editalVersions    EditalVersion[]
   
   nodes           KnowledgeNode[]

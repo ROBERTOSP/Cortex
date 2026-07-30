@@ -39,7 +39,24 @@ type CatalogContest = {
   title: string;
   board?: string | null;
   examDate?: string | null;
-  extraction?: { jobs?: Array<{ name: string }> };
+  extraction?: {
+    summary?: string;
+    generalEligibilityRequirements?: string[];
+    notices?: string[];
+    jobs?: Array<{
+      name: string;
+      baseJob?: string;
+      profileName?: string;
+      requirements?: string[];
+      taskSummary?: string;
+      tasks?: string[];
+      vacancies?: string | null;
+      quotas?: string[];
+      pcd?: string[];
+      notes?: string[];
+      subjects?: Array<{ name: string; topics?: Array<{ name: string; subtopics?: string[] }> }>;
+    }>;
+  };
 };
 const days: [Day, string][] = [
   ["MON", "Segunda"],
@@ -97,6 +114,16 @@ function Choice({
   );
 }
 
+function InfoBlock({ title, values }: { title: string; values?: string[] | null }) {
+  if (!values?.length) return null;
+  return <div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p><ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">{values.map((value) => <li key={value} className="flex gap-2"><span className="text-primary">•</span><span>{value}</span></li>)}</ul></div>;
+}
+
+function InfoPanel({ title, values }: { title: string; values?: string[] | null }) {
+  if (!values?.length) return null;
+  return <div className="rounded-2xl border bg-card p-5"><h3 className="font-semibold">{title}</h3><ul className="mt-3 space-y-2 text-sm text-muted-foreground">{values.map((value) => <li key={value} className="flex gap-2"><span className="text-primary">•</span><span>{value}</span></li>)}</ul></div>;
+}
+
 export function RoutineOnboardingV1() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
@@ -132,6 +159,11 @@ export function RoutineOnboardingV1() {
   const [catalog, setCatalog] = useState<CatalogContest[]>([]);
   const [editalMode, setEditalMode] = useState<"catalog">("catalog");
   const [catalogId, setCatalogId] = useState("");
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [boardFilter, setBoardFilter] = useState("");
+  const [candidateProfile, setCandidateProfile] = useState<{ selfDeclaredColor?: string | null; hasDisability?: boolean | null }>({});
+  const [participationMode, setParticipationMode] = useState("");
+  const [considerPcdRules, setConsiderPcdRules] = useState("");
   const [contestCreated, setContestCreated] = useState(false);
   const [draftContestId, setDraftContestId] = useState<string | null>(null);
   const [editalReview, setEditalReview] = useState<any>(null);
@@ -201,6 +233,8 @@ export function RoutineOnboardingV1() {
           })),
         );
         if (saved?.catalogId) setCatalogId(saved.catalogId);
+        if (saved?.participationMode) setParticipationMode(saved.participationMode);
+        if (saved?.considerPcdRules) setConsiderPcdRules(saved.considerPcdRules);
         const draft = contests.find((contest) => contest.status === "DRAFT");
         if (draft) {
           setDraftContestId(draft.id);
@@ -224,14 +258,17 @@ export function RoutineOnboardingV1() {
     if (!hydrated) return;
     try {
       localStorage.setItem(onboardingDraftKey, JSON.stringify({
-        step, goal, routine, windows, commitments, editalMode, catalogId,
+        step, goal, routine, windows, commitments, editalMode, catalogId, participationMode, considerPcdRules,
       }));
     } catch {}
-  }, [hydrated, step, goal, routine, windows, commitments, editalMode, catalogId]);
+  }, [hydrated, step, goal, routine, windows, commitments, editalMode, catalogId, participationMode, considerPcdRules]);
   useEffect(() => {
     apiFetch<CatalogContest[]>("/contests/published-catalog")
       .then(setCatalog)
       .catch(() => setCatalog([]));
+    apiFetch<any>("/users/me/profile")
+      .then((response) => setCandidateProfile(response.profile || {}))
+      .catch(() => setCandidateProfile({}));
   }, []);
   const saveGoal = () =>
     apiFetch("/routine/me/goal", {
@@ -289,6 +326,8 @@ export function RoutineOnboardingV1() {
       targetJob: goal.targetJob || goal.title,
       board: goal.board || undefined,
       examDate: goal.examDate || undefined,
+      participationMode,
+      highlightPcdRules: considerPcdRules === "YES",
     };
     let contest: any;
     if (!catalogId) throw new Error("Escolha o edital do seu concurso.");
@@ -308,7 +347,7 @@ export function RoutineOnboardingV1() {
     try {
       await apiFetch(`/contests/${draftContestId}/confirm-edital`, {
         method: "POST",
-        body: JSON.stringify({ selectedJob: goal.targetJob, targetJob: goal.targetJob }),
+        body: JSON.stringify({ selectedJob: goal.targetJob, targetJob: goal.targetJob, participationMode, highlightPcdRules: considerPcdRules === "YES" }),
       });
       await saveGoal();
       setDraftContestId(null);
@@ -404,6 +443,12 @@ export function RoutineOnboardingV1() {
   const selectedEditalJob = (editalReview?.editalDraft?.jobs || []).find((job: any) => job.name === goal.targetJob) as any;
   const selectedSubjectCount = selectedEditalJob?.subjects?.length || 0;
   const selectedTopicCount = (selectedEditalJob?.subjects || []).reduce((total: number, subject: any) => total + (subject.topics?.length || 0), 0);
+  const boards = [...new Set(catalog.map((item) => item.board).filter(Boolean))] as string[];
+  const filteredCatalog = catalog.filter((item) => {
+    const query = catalogSearch.trim().toLocaleLowerCase("pt-BR");
+    const matchesSearch = !query || `${item.title} ${item.board || ""}`.toLocaleLowerCase("pt-BR").includes(query);
+    return matchesSearch && (!boardFilter || item.board === boardFilter);
+  });
   return (
     <main className="min-h-screen bg-background px-6 py-10 text-foreground md:px-12">
       <header className="mb-8 flex w-full items-start justify-between gap-5">
@@ -481,10 +526,45 @@ export function RoutineOnboardingV1() {
               </div>
               <div className="rounded-2xl border border-border bg-muted/30 p-4">
                 <h3 className="font-semibold">Informações do perfil</h3>
-                {selectedEditalJob ? <><p className="mt-1 text-sm font-medium text-primary">{selectedEditalJob.baseJob || selectedEditalJob.name}</p><p className="mt-3 text-sm text-muted-foreground">{selectedEditalJob.taskSummary || "Selecione um perfil para conferir requisitos e matérias específicas."}</p><p className="mt-3 text-sm font-medium text-primary">{selectedSubjectCount} matérias específicas e comuns · {selectedTopicCount} tópicos identificados</p><div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Requisitos</p><p className="mt-1 text-sm">{selectedEditalJob.requirements?.join(" · ") || "Não identificado no edital."}</p></div>{selectedEditalJob.tasks?.length ? <div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Atribuições</p><ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">{selectedEditalJob.tasks.slice(0, 6).map((task: string) => <li key={task} className="flex gap-2"><span className="text-primary">•</span><span>{task}</span></li>)}</ul></div> : null}<div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Matérias do perfil</p><ul className="mt-2 grid gap-2 text-sm">{(selectedEditalJob.subjects || []).map((subject: any) => <li key={subject.name} className="rounded-lg border bg-background px-3 py-2">{subject.name}</li>)}</ul></div></> : <p className="mt-2 text-sm text-muted-foreground">Escolha um perfil para ver requisitos, atribuições e matérias.</p>}
+                {selectedEditalJob ? <>
+                  <p className="mt-1 text-sm font-medium text-primary">{selectedEditalJob.baseJob || selectedEditalJob.name}</p>
+                  <p className="mt-3 text-sm text-muted-foreground">{selectedEditalJob.taskSummary || "Confira as informações encontradas para este cargo."}</p>
+                  <p className="mt-3 text-sm font-medium text-primary">{selectedSubjectCount} matérias · {selectedTopicCount} tópicos identificados</p>
+                  <InfoBlock title="Requisitos" values={selectedEditalJob.requirements} />
+                  {selectedEditalJob.vacancies && <InfoBlock title="Vagas e localidades" values={[selectedEditalJob.vacancies]} />}
+                  <InfoBlock title="Reserva de vagas" values={selectedEditalJob.quotas} />
+                  <InfoBlock title="Pessoas com deficiência" values={selectedEditalJob.pcd} />
+                  <InfoBlock title="Observações do cargo" values={selectedEditalJob.notes} />
+                  <InfoBlock title="Atribuições" values={selectedEditalJob.tasks} />
+                  <div className="mt-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Matérias, tópicos e subtópicos</p>
+                    <div className="mt-2 grid gap-2">
+                      {(selectedEditalJob.subjects || []).map((subject: any) => (
+                        <details key={subject.name} className="rounded-lg border bg-background px-3 py-2">
+                          <summary className="cursor-pointer text-sm font-medium">{subject.name}</summary>
+                          <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
+                            {(subject.topics || []).map((topic: any) => <li key={topic.name}><strong className="text-foreground">{topic.name}</strong>{topic.subtopics?.length ? <span className="mt-1 block text-xs">{topic.subtopics.join(" · ")}</span> : null}</li>)}
+                          </ul>
+                        </details>
+                      ))}
+                    </div>
+                  </div>
+                </> : <p className="mt-2 text-sm text-muted-foreground">Escolha um perfil para ver requisitos, vagas, modalidades e matérias.</p>}
               </div>
             </div>
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5"><Button type="button" variant="ghost" onClick={replaceCurrentEdital} disabled={saving}>Escolher outro edital</Button><Button onClick={confirmSelectedProfile} disabled={!goal.targetJob || saving}>{saving ? "Salvando perfil…" : "Confirmar cargo e continuar"} <ChevronRight /></Button></div>
+            {selectedEditalJob && <section className="mt-7 rounded-2xl border bg-card p-5">
+              <p className="text-sm font-semibold text-primary">Como você pretende participar?</p>
+              <h3 className="mt-1 text-lg font-semibold">Escolha como deseja considerar as modalidades previstas no edital</h3>
+              <p className="mt-2 text-sm text-muted-foreground">O Cortex não define sua identidade nem sua elegibilidade. Mostramos as regras encontradas e você escolhe como pretende se inscrever; a confirmação oficial acontece no sistema da organizadora.</p>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <Choice selected={participationMode === "GENERAL"} onClick={() => setParticipationMode("GENERAL")} title="Ampla concorrência" detail="Montar o plano sem considerar uma modalidade de reserva de vagas." />
+                <Choice selected={participationMode === "RESERVED"} onClick={() => setParticipationMode("RESERVED")} title="Quero avaliar reserva de vagas" detail="Destacar regras, documentos e prazos aplicáveis encontrados no edital." />
+                <Choice selected={participationMode === "UNDECIDED"} onClick={() => setParticipationMode("UNDECIDED")} title="Ainda não decidi" detail="Manter as opções visíveis para você revisar mais tarde." />
+              </div>
+              {candidateProfile.hasDisability && selectedEditalJob.pcd?.length ? <div className="mt-5"><p className="text-sm font-medium">Você informou possuir deficiência. Deseja que o Cortex destaque as regras e os prazos de atendimento previstos neste edital?</p><div className="mt-3 flex flex-wrap gap-2"><Button type="button" variant={considerPcdRules === "YES" ? "default" : "outline"} onClick={() => setConsiderPcdRules("YES")}>Sim, destacar</Button><Button type="button" variant={considerPcdRules === "NO" ? "default" : "outline"} onClick={() => setConsiderPcdRules("NO")}>Não agora</Button></div></div> : null}
+            </section>}
+            {(editalReview.editalDraft?.generalEligibilityRequirements?.length || editalReview.editalDraft?.notices?.length) ? <section className="mt-7 grid gap-4 md:grid-cols-2"><InfoPanel title="Requisitos gerais" values={editalReview.editalDraft.generalEligibilityRequirements} /><InfoPanel title="Avisos importantes" values={editalReview.editalDraft.notices} /></section> : null}
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5"><Button type="button" variant="ghost" onClick={replaceCurrentEdital} disabled={saving}>Escolher outro edital</Button><Button onClick={confirmSelectedProfile} disabled={!goal.targetJob || !participationMode || saving}>{saving ? "Salvando perfil…" : "Confirmar cargo e continuar"} <ChevronRight /></Button></div>
           </section>
         ) : step === 0 && (
           <section className="py-7">
@@ -493,7 +573,7 @@ export function RoutineOnboardingV1() {
               Vamos começar pelo seu edital
             </h2>
             <p className="mt-2 text-muted-foreground">
-              Envie o documento ou cole o link. O Cortex encontra os cargos, regras e matérias antes de pedir informações sobre sua rotina.
+              Pesquise um edital já revisado pela equipe Cortex. Depois, escolha o cargo para receber somente as informações relevantes ao seu objetivo.
             </p>
             <div className="mt-7 w-full space-y-4">
                 <div>
@@ -501,8 +581,12 @@ export function RoutineOnboardingV1() {
                   <p className="mt-1 text-sm text-muted-foreground">
                     Cada edital foi analisado e revisado uma única vez pela equipe Cortex. Ao selecionar, você confere cargos, requisitos, banca e matérias sem gastar uma nova análise.
                   </p>
+                  <div className="mt-4 grid gap-3 md:grid-cols-[1fr_260px]">
+                    <Input value={catalogSearch} onChange={(event) => setCatalogSearch(event.target.value)} placeholder="Pesquisar por concurso, órgão ou banca" aria-label="Pesquisar editais" />
+                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={boardFilter} onChange={(event) => setBoardFilter(event.target.value)} aria-label="Filtrar por banca"><option value="">Todas as bancas</option>{boards.map((board) => <option key={board} value={board}>{board}</option>)}</select>
+                  </div>
                   <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {catalog.map((item) => (
+                    {filteredCatalog.map((item) => (
                       <Choice
                         key={item.id}
                         selected={catalogId === item.id}
@@ -512,6 +596,7 @@ export function RoutineOnboardingV1() {
                       />
                     ))}
                   </div>
+                  {catalog.length > 0 && filteredCatalog.length === 0 && <div className="mt-4 rounded-xl border border-dashed p-6 text-sm text-muted-foreground">Nenhum edital corresponde aos filtros informados.</div>}
                   {!catalog.length && <div className="mt-4 rounded-xl border border-dashed p-6 text-sm text-muted-foreground">Nenhum edital está publicado no momento. A equipe Cortex precisa publicar o edital pelo painel administrativo.</div>}
                 </div>
             </div>

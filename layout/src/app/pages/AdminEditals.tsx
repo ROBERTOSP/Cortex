@@ -18,8 +18,8 @@ import { Input } from "../components/ui/input";
 import { DisplayPreferences } from "../components/DisplayPreferences";
 
 type Subject = { name: string; topics?: Array<{ name: string; subtopics?: string[] }> };
-type Job = { name: string; baseJob?: string; requirements?: string[]; subjects?: Subject[] };
-type Extraction = { jobs?: Job[]; summary?: string; notices?: string[] };
+type Job = { name: string; baseJob?: string; requirements?: string[]; taskSummary?: string; tasks?: string[]; vacancies?: string | null; quotas?: string[]; pcd?: string[]; notes?: string[]; subjects?: Subject[] };
+type Extraction = { jobs?: Job[]; summary?: string; generalEligibilityRequirements?: string[]; notices?: string[] };
 type Edital = {
   id: string;
   title: string;
@@ -212,7 +212,9 @@ export function AdminEditals() {
                   <label className="grid gap-1.5 text-sm font-medium">Banca<Input value={form.board} onChange={(event) => setForm({ ...form, board: event.target.value })} /></label>
                   <label className="grid gap-1.5 text-sm font-medium">Data da prova<Input type="date" value={form.examDate} onChange={(event) => setForm({ ...form, examDate: event.target.value })} /></label>
                 </div>
-                <div className="mt-6"><h3 className="font-semibold">Cargos e perfis extraídos</h3><div className="mt-3 grid gap-3 md:grid-cols-2">{jobs.map((job) => <article key={job.name} className="rounded-xl border p-4"><strong className="block">{job.name}</strong><p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{job.requirements?.join(" · ") || "Requisito não identificado"}</p><p className="mt-3 text-xs font-medium text-primary">{job.subjects?.length || 0} matérias</p></article>)}</div></div>
+                {selected.extraction?.summary && <div className="mt-5 rounded-xl bg-muted/50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Resumo</p><p className="mt-2 text-sm">{selected.extraction.summary}</p></div>}
+                <div className="mt-6"><h3 className="font-semibold">Cargos e perfis extraídos</h3><div className="mt-3 grid gap-3 md:grid-cols-2">{jobs.map((job) => <details key={job.name} className="rounded-xl border p-4"><summary className="cursor-pointer"><strong className="block">{job.name}</strong><span className="mt-2 block text-sm text-muted-foreground">{job.requirements?.join(" · ") || "Requisito não identificado"}</span><span className="mt-3 block text-xs font-medium text-primary">{job.subjects?.length || 0} matérias</span></summary><AdminInfo title="Vagas e localidades" values={job.vacancies ? [job.vacancies] : []} /><AdminInfo title="Reserva de vagas" values={job.quotas} /><AdminInfo title="Pessoas com deficiência" values={job.pcd} /><AdminInfo title="Atribuições" values={job.tasks} /><AdminInfo title="Observações" values={job.notes} /><div className="mt-4"><p className="text-xs font-semibold uppercase text-muted-foreground">Matérias, tópicos e subtópicos</p><div className="mt-2 space-y-2">{(job.subjects || []).map((subject) => <div key={subject.name} className="rounded-lg bg-muted/50 p-3 text-sm"><strong>{subject.name}</strong><ul className="mt-2 space-y-1 text-xs text-muted-foreground">{(subject.topics || []).map((topic) => <li key={topic.name}>{topic.name}{topic.subtopics?.length ? ` — ${topic.subtopics.join(" · ")}` : ""}</li>)}</ul></div>)}</div></div></details>)}</div></div>
+                <div className="mt-6 grid gap-4 md:grid-cols-2"><AdminPanel title="Requisitos gerais" values={selected.extraction?.generalEligibilityRequirements} /><AdminPanel title="Avisos importantes" values={selected.extraction?.notices} /></div>
                 <div className="mt-6 flex flex-wrap justify-end gap-2 border-t pt-5">
                   {selected.status !== "ARCHIVED" && <Button variant="outline" onClick={() => changeStatus("archive")} disabled={saving}><Archive /> Arquivar</Button>}
                   <Button variant="outline" onClick={save} disabled={saving || !form.title.trim()}>Salvar revisão</Button>
@@ -229,4 +231,14 @@ export function AdminEditals() {
 
 function Metric({ label, value }: { label: string; value: number }) {
   return <div className="rounded-xl border bg-card p-4"><span className="text-sm text-muted-foreground">{label}</span><strong className="mt-1 block text-2xl">{value}</strong></div>;
+}
+
+function AdminInfo({ title, values }: { title: string; values?: string[] | null }) {
+  if (!values?.length) return null;
+  return <div className="mt-4"><p className="text-xs font-semibold uppercase text-muted-foreground">{title}</p><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{values.map((value) => <li key={value}>• {value}</li>)}</ul></div>;
+}
+
+function AdminPanel({ title, values }: { title: string; values?: string[] | null }) {
+  if (!values?.length) return null;
+  return <div className="rounded-xl border p-4"><h3 className="font-semibold">{title}</h3><ul className="mt-3 space-y-2 text-sm text-muted-foreground">{values.map((value) => <li key={value}>• {value}</li>)}</ul></div>;
 }

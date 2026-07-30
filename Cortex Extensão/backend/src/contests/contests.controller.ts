@@ -102,6 +102,8 @@ export class ContestsController {
       examDate: typeof data.examDate === 'string' ? data.examDate : undefined,
       templateId: typeof data.templateId === 'string' ? data.templateId : undefined,
       editalText: typeof data.editalText === 'string' ? data.editalText : undefined,
+      participationMode: typeof data.participationMode === 'string' ? data.participationMode : undefined,
+      highlightPcdRules: typeof data.highlightPcdRules === 'boolean' ? data.highlightPcdRules : undefined,
     });
   }
 
@@ -192,6 +194,8 @@ export class ContestsController {
       selectedJob: typeof body.selectedJob === 'string' ? body.selectedJob : undefined,
       board: typeof body.board === 'string' ? body.board : undefined,
       examDate: typeof body.examDate === 'string' ? body.examDate : undefined,
+      participationMode: typeof body.participationMode === 'string' ? body.participationMode : undefined,
+      highlightPcdRules: typeof body.highlightPcdRules === 'boolean' ? body.highlightPcdRules : undefined,
       subjects: body.subjects,
     });
   }
