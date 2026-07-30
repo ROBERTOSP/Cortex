@@ -4,7 +4,6 @@ import { router } from "./routes";
 import { AuthProvider } from "./auth/AuthContext";
 import { useEffect } from "react";
 import { useAuth } from "./auth/AuthContext";
-import { ProfileShortcut } from "./components/ProfileShortcut";
 
 export default function App() {
   return (
@@ -18,7 +17,6 @@ export default function App() {
         <Bootstrap />
         <div className="font-[family-name:var(--font-inter)]">
           <RouterProvider router={router} />
-          <ProfileShortcut />
         </div>
       </AuthProvider>
     </ThemeProvider>

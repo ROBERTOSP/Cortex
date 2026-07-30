@@ -124,6 +124,7 @@ model User {
   city            String?
   availableOtherStates Boolean? @map("available_other_states")
   tokens          Int      @default(100)
+  role            String   @default("USER")
   
   // Perfil Cognitivo / Rotina
   studyLevel      String?  // Ativo, Inativo
@@ -282,6 +283,20 @@ model DailyCheckIn {
 
   @@unique([userId, dateKey])
   @@map("daily_check_ins")
+}
+
+model SharedEdital {
+  id          String   @id @default(uuid())
+  title       String
+  board       String?
+  examDate    DateTime?
+  status      String   @default("DRAFT")
+  extraction  Json?
+  sourceText  String?  @map("source_text")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("shared_editals")
 }
 
 model Contest {

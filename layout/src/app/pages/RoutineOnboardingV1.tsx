@@ -34,11 +34,10 @@ type Commitment = {
 };
 type CatalogContest = {
   id: string;
-  name: string;
-  board: string;
-  targetJob: string;
-  examDate: string;
-  description: string;
+  title: string;
+  board?: string | null;
+  examDate?: string | null;
+  extraction?: { jobs?: Array<{ name: string }> };
 };
 const days: [Day, string][] = [
   ["MON", "Segunda"],
@@ -128,12 +127,8 @@ export function RoutineOnboardingV1() {
   const [windows, setWindows] = useState<Window[]>([]);
   const [commitments, setCommitments] = useState<Commitment[]>([]);
   const [catalog, setCatalog] = useState<CatalogContest[]>([]);
-  const [editalMode, setEditalMode] = useState<
-    "none" | "catalog" | "pdf" | "link"
-  >("none");
+  const [editalMode, setEditalMode] = useState<"catalog">("catalog");
   const [catalogId, setCatalogId] = useState("");
-  const [editalFile, setEditalFile] = useState<File | null>(null);
-  const [editalLink, setEditalLink] = useState("");
   const [contestCreated, setContestCreated] = useState(false);
   const [draftContestId, setDraftContestId] = useState<string | null>(null);
   const [editalReview, setEditalReview] = useState<any>(null);
@@ -154,7 +149,7 @@ export function RoutineOnboardingV1() {
     document.documentElement.style.setProperty("--font-size", next ? "18px" : "16px");
   };
   useEffect(() => {
-    if (!saving || step !== 0 || editalMode === "none") { setProcessingStep(0); return; }
+    if (!saving || step !== 0) { setProcessingStep(0); return; }
     const interval = window.setInterval(() => setProcessingStep((current) => Math.min(current + 1, editalProcessingSteps.length - 1)), 1800);
     return () => window.clearInterval(interval);
   }, [saving, step, editalMode]);
@@ -202,9 +197,7 @@ export function RoutineOnboardingV1() {
             endTime: fmt(c.endMinute),
           })),
         );
-        if (saved?.editalMode) setEditalMode(saved.editalMode);
         if (saved?.catalogId) setCatalogId(saved.catalogId);
-        if (saved?.editalLink) setEditalLink(saved.editalLink);
         const draft = contests.find((contest) => contest.status === "DRAFT");
         if (draft) {
           setDraftContestId(draft.id);
@@ -228,12 +221,12 @@ export function RoutineOnboardingV1() {
     if (!hydrated) return;
     try {
       localStorage.setItem(onboardingDraftKey, JSON.stringify({
-        step, goal, routine, windows, commitments, editalMode, catalogId, editalLink,
+        step, goal, routine, windows, commitments, editalMode, catalogId,
       }));
     } catch {}
-  }, [hydrated, step, goal, routine, windows, commitments, editalMode, catalogId, editalLink]);
+  }, [hydrated, step, goal, routine, windows, commitments, editalMode, catalogId]);
   useEffect(() => {
-    apiFetch<CatalogContest[]>("/contests/catalog")
+    apiFetch<CatalogContest[]>("/contests/published-catalog")
       .then(setCatalog)
       .catch(() => setCatalog([]));
   }, []);
@@ -287,7 +280,7 @@ export function RoutineOnboardingV1() {
       }),
     });
   const createContest = async () => {
-    if (contestCreated || editalMode === "none") return;
+    if (contestCreated) return;
     const meta = {
       name: goal.title,
       targetJob: goal.targetJob || goal.title,
@@ -295,38 +288,11 @@ export function RoutineOnboardingV1() {
       examDate: goal.examDate || undefined,
     };
     let contest: any;
-    if (editalMode === "catalog") {
-      if (!catalogId)
-        throw new Error(
-          "Escolha um edital do catálogo ou selecione outra opção.",
-        );
-      contest = await apiFetch("/contests", {
-        method: "POST",
-        body: JSON.stringify({ ...meta, templateId: catalogId }),
-      });
-    }
-    if (editalMode === "pdf") {
-      if (!editalFile)
-        throw new Error("Selecione o PDF do edital para continuar.");
-      const body = new FormData();
-      body.set("file", editalFile);
-      setUploadPhase("sending");
-      Object.entries(meta).forEach(([key, value]) => {
-        if (value) body.set(key, value);
-      });
-      contest = await apiFetch("/contests/upload-edital", {
-        method: "POST",
-        body,
-      });
-    }
-    if (editalMode === "link") {
-      if (!editalLink.trim())
-        throw new Error("Cole o link direto do PDF do edital.");
-      contest = await apiFetch("/contests/import-edital-link", {
-        method: "POST",
-        body: JSON.stringify({ ...meta, url: editalLink.trim() }),
-      });
-    }
+    if (!catalogId) throw new Error("Escolha o edital do seu concurso.");
+    contest = await apiFetch("/contests", {
+      method: "POST",
+      body: JSON.stringify({ ...meta, templateId: catalogId }),
+    });
     if (contest?.status === "DRAFT") { setDraftContestId(contest.id); setEditalReview(contest); }
     setContestCreated(true);
     return contest;
@@ -375,9 +341,8 @@ export function RoutineOnboardingV1() {
       setEditalReview(null);
       setContestCreated(false);
       setGoal((current) => ({ ...current, targetJob: "", title: "", board: "", examDate: "", examDateUnknown: true }));
-      setEditalFile(null);
-      setEditalMode("pdf");
-      setError("A análise antiga foi substituída. Selecione o PDF novamente para usar a leitura corrigida.");
+      setCatalogId("");
+      setError("Escolha outro edital do catálogo.");
     } catch (e: any) {
       setError(e.message || "Não foi possível substituir este edital.");
     } finally {
@@ -386,8 +351,8 @@ export function RoutineOnboardingV1() {
   };
   const advance = async () => {
     setError("");
-    if (step === 0 && editalMode === "none" && !goal.title.trim()) {
-      setError("Envie o edital ou informe um objetivo para continuar.");
+    if (step === 0 && !catalogId && !editalReview) {
+      setError("Escolha o edital do seu concurso para continuar.");
       return;
     }
     if (step === 2 && !windows.length) {
@@ -398,7 +363,7 @@ export function RoutineOnboardingV1() {
     try {
       if (step === 0) {
         const contest = await createContest();
-        if (editalMode !== "none" && !contest) throw new Error("O arquivo não foi enviado. Selecione o edital novamente e tente mais uma vez.");
+        if (!contest) throw new Error("Não foi possível abrir o edital selecionado.");
         if (contest?.status === "DRAFT") return;
         await saveGoal();
       }
@@ -514,7 +479,7 @@ export function RoutineOnboardingV1() {
                 {selectedEditalJob ? <><p className="mt-1 text-sm font-medium text-primary">{selectedEditalJob.baseJob || selectedEditalJob.name}</p><p className="mt-3 text-sm text-muted-foreground">{selectedEditalJob.taskSummary || "Selecione um perfil para conferir requisitos e matérias específicas."}</p><p className="mt-3 text-sm font-medium text-primary">{selectedSubjectCount} matérias específicas e comuns · {selectedTopicCount} tópicos identificados</p><div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Requisitos</p><p className="mt-1 text-sm">{selectedEditalJob.requirements?.join(" · ") || "Não identificado no edital."}</p></div>{selectedEditalJob.tasks?.length ? <div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Atribuições</p><ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">{selectedEditalJob.tasks.slice(0, 6).map((task: string) => <li key={task} className="flex gap-2"><span className="text-primary">•</span><span>{task}</span></li>)}</ul></div> : null}<div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Matérias do perfil</p><ul className="mt-2 grid gap-2 text-sm">{(selectedEditalJob.subjects || []).map((subject: any) => <li key={subject.name} className="rounded-lg border bg-background px-3 py-2">{subject.name}</li>)}</ul></div></> : <p className="mt-2 text-sm text-muted-foreground">Escolha um perfil para ver requisitos, atribuições e matérias.</p>}
               </div>
             </div>
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5"><div className="flex flex-wrap items-center gap-3"><Button type="button" variant="outline" onClick={reanalyzeCurrentEdital} disabled={saving}>Reanalisar edital</Button><Button type="button" variant="ghost" onClick={replaceCurrentEdital} disabled={saving}>Trocar este edital</Button></div><Button onClick={confirmSelectedProfile} disabled={!goal.targetJob || saving}>{saving ? "Salvando perfil…" : "Confirmar cargo e continuar"} <ChevronRight /></Button></div>
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5"><Button type="button" variant="ghost" onClick={replaceCurrentEdital} disabled={saving}>Escolher outro edital</Button><Button onClick={confirmSelectedProfile} disabled={!goal.targetJob || saving}>{saving ? "Salvando perfil…" : "Confirmar cargo e continuar"} <ChevronRight /></Button></div>
           </section>
         ) : step === 0 && (
           <section className="py-7">
@@ -527,19 +492,22 @@ export function RoutineOnboardingV1() {
             </p>
             <div className="mt-7 w-full space-y-4">
                 <div>
-                  <Label>Envie seu edital para uma análise inteligente</Label>
+                  <Label>Escolha o edital do seu concurso</Label>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Em poucos instantes, identificaremos banca, datas, cargos, requisitos, cotas/PCD e as matérias de cada cargo. Você revisa tudo antes de continuar.
+                    Cada edital foi analisado e revisado uma única vez pela equipe Cortex. Ao selecionar, você confere cargos, requisitos, banca e matérias sem gastar uma nova análise.
                   </p>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <Choice selected={editalMode === "none"} onClick={() => setEditalMode("none")} title="Ainda não" />
-                    <Choice selected={editalMode === "pdf"} onClick={() => setEditalMode("pdf")} title="Enviar PDF" />
-                    <Choice selected={editalMode === "link"} onClick={() => setEditalMode("link")} title="Colar link" />
-                    <Choice selected={editalMode === "catalog"} onClick={() => setEditalMode("catalog")} title="Usar catálogo" />
+                  <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {catalog.map((item) => (
+                      <Choice
+                        key={item.id}
+                        selected={catalogId === item.id}
+                        onClick={() => setCatalogId(item.id)}
+                        title={item.title}
+                        detail={`${item.board || "Banca a confirmar"} · ${item.extraction?.jobs?.length || 0} cargos`}
+                      />
+                    ))}
                   </div>
-                  {editalMode === "pdf" && <div className="mt-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4"><input id="edital-pdf" className="sr-only" type="file" accept="application/pdf,.pdf" onChange={(event) => setEditalFile(event.target.files?.[0] || null)} /><label htmlFor="edital-pdf" className="flex cursor-pointer items-center justify-between gap-3"><span><strong className="block">Selecionar PDF do edital</strong><span className="mt-1 block text-sm text-muted-foreground">{editalFile ? `Arquivo selecionado: ${editalFile.name}` : "Clique aqui para escolher o arquivo"}</span></span><span className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground">Escolher arquivo</span></label></div>}
-                  {editalMode === "link" && <Input className="mt-3" type="url" value={editalLink} onChange={(event) => setEditalLink(event.target.value)} placeholder="https://.../edital.pdf" />}
-                  {editalMode === "catalog" && <select className="mt-3 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={catalogId} onChange={(event) => setCatalogId(event.target.value)}><option value="">Escolha um edital</option>{catalog.map((item) => <option key={item.id} value={item.id}>{item.name} — {item.targetJob}</option>)}</select>}
+                  {!catalog.length && <div className="mt-4 rounded-xl border border-dashed p-6 text-sm text-muted-foreground">Nenhum edital está publicado no momento. A equipe Cortex precisa publicar o edital pelo painel administrativo.</div>}
                 </div>
             </div>
           </section>

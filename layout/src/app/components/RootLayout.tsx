@@ -106,7 +106,8 @@ export function RootLayout() {
   if (
     location.pathname === "/app/onboarding-v1" ||
     location.pathname === "/app/onboarding" ||
-    location.pathname.startsWith("/app/edital-review/")
+    location.pathname.startsWith("/app/edital-review/") ||
+    location.pathname.startsWith("/app/admin/")
   ) {
     return <Outlet />;
   }

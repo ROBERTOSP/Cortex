@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UnauthorizedException,
@@ -22,6 +24,68 @@ export class ContestsController {
   @Get('catalog')
   listCatalog() {
     return this.contestsService.listCatalog();
+  }
+
+  @Get('published-catalog')
+  listPublishedCatalog() {
+    return this.contestsService.listPublishedCatalog();
+  }
+
+  @Get('admin/editals')
+  async listAdminEditals(@Req() req) {
+    const userId = String(req.user?.sub || '');
+    if (!userId) throw new UnauthorizedException();
+    const user = await this.contestsService.getUserRole(userId);
+    if (user.role !== 'ADMIN') throw new UnauthorizedException('Acesso administrativo necessário');
+    return this.contestsService.listAdminEditals();
+  }
+
+  @Post('admin/editals')
+  async createAdminEdital(@Req() req, @Body() body: Record<string, string>) {
+    const userId = String(req.user?.sub || '');
+    if (!userId || (await this.contestsService.getUserRole(userId)).role !== 'ADMIN') throw new UnauthorizedException('Acesso administrativo necessário');
+    if (!body.title?.trim()) throw new BadRequestException('Informe o nome do edital');
+    return this.contestsService.createAdminEdital({
+      title: body.title,
+      board: body.board,
+      examDate: body.examDate,
+    });
+  }
+
+  @Post('admin/editals/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAdminEdital(@Req() req, @UploadedFile() file: Express.Multer.File) {
+    const userId = String(req.user?.sub || '');
+    await this.contestsService.assertAdmin(userId);
+    return this.contestsService.analyzeSharedEdital(file, userId);
+  }
+
+  @Get('admin/editals/:editalId')
+  async getAdminEdital(@Req() req, @Param('editalId') editalId: string) {
+    await this.contestsService.assertAdmin(String(req.user?.sub || ''));
+    return this.contestsService.getAdminEdital(editalId);
+  }
+
+  @Patch('admin/editals/:editalId')
+  async updateAdminEdital(
+    @Req() req,
+    @Param('editalId') editalId: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    await this.contestsService.assertAdmin(String(req.user?.sub || ''));
+    return this.contestsService.updateAdminEdital(editalId, body);
+  }
+
+  @Post('admin/editals/:editalId/publish')
+  async publishAdminEdital(@Req() req, @Param('editalId') editalId: string) {
+    await this.contestsService.assertAdmin(String(req.user?.sub || ''));
+    return this.contestsService.setAdminEditalStatus(editalId, 'PUBLISHED');
+  }
+
+  @Post('admin/editals/:editalId/archive')
+  async archiveAdminEdital(@Req() req, @Param('editalId') editalId: string) {
+    await this.contestsService.assertAdmin(String(req.user?.sub || ''));
+    return this.contestsService.setAdminEditalStatus(editalId, 'ARCHIVED');
   }
 
   @Post()
@@ -52,6 +116,7 @@ export class ContestsController {
     if (!userId) {
       throw new UnauthorizedException();
     }
+    await this.contestsService.assertAdmin(userId);
 
     return this.contestsService.parseAndCreateFromEdital(file, userId, {
       name: body.name,
@@ -67,6 +132,7 @@ export class ContestsController {
     if (!userId) {
       throw new UnauthorizedException();
     }
+    await this.contestsService.assertAdmin(userId);
 
     return this.contestsService.parseAndCreateFromEditalLink(body.url, userId, {
       name: body.name,
@@ -102,9 +168,10 @@ export class ContestsController {
   }
 
   @Post(':contestId/reanalyze-edital')
-  reanalyzeEdital(@Req() req, @Param('contestId') contestId: string) {
+  async reanalyzeEdital(@Req() req, @Param('contestId') contestId: string) {
     const userId = String(req.user?.sub || '');
     if (!userId) throw new UnauthorizedException();
+    await this.contestsService.assertAdmin(userId);
     return this.contestsService.reanalyzeEditalForUser(userId, contestId);
   }
 

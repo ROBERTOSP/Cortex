@@ -9,6 +9,7 @@ import { Schedule } from "./pages/Schedule";
 import { RoutineOnboardingV1 } from "./pages/RoutineOnboardingV1";
 import { PrivacyRoutine } from "./pages/PrivacyRoutine";
 import { EditalReview } from "./pages/EditalReview";
+import { AdminEditals } from "./pages/AdminEditals";
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       { path: "onboarding-v1", Component: RoutineOnboardingV1 },
       { path: "como-usamos-seus-dados", Component: PrivacyRoutine },
       { path: "edital-review/:contestId", Component: EditalReview },
+      { path: "admin/editais", Component: AdminEditals },
       { path: "study", Component: DeepWork },
       { path: "analytics", Component: Analytics },
       { path: "schedule", Component: Schedule },

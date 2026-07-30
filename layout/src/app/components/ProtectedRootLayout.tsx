@@ -81,7 +81,8 @@ export function ProtectedRootLayout() {
   const isOnboardingRoute =
     location.pathname === "/app/onboarding" ||
     location.pathname === "/app/onboarding-v1" ||
-    location.pathname.startsWith("/app/edital-review/");
+    location.pathname.startsWith("/app/edital-review/") ||
+    location.pathname.startsWith("/app/admin/");
 
   const onboardingCompleted = legacyOnboardingCompleted || routineOnboardingCompleted;
 

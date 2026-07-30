@@ -131,6 +131,101 @@ export class ContestsService {
     return CONTEST_CATALOG;
   }
 
+  async listPublishedCatalog() {
+    return this.database.sharedEdital.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { id: true, title: true, board: true, examDate: true, extraction: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
+
+  async listAdminEditals() {
+    return this.database.sharedEdital.findMany({ orderBy: { updatedAt: 'desc' } });
+  }
+
+  async createAdminEdital(data: { title: string; board?: string; examDate?: string }) {
+    return this.database.sharedEdital.create({ data: { title: data.title.trim(), board: data.board?.trim() || null, examDate: data.examDate ? new Date(data.examDate) : null } });
+  }
+
+  async getUserRole(userId: string) {
+    const user = await this.database.user.findUnique({ where: { id: userId }, select: { role: true } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+    return user;
+  }
+
+  async assertAdmin(userId: string) {
+    if (!userId || (await this.getUserRole(userId)).role !== 'ADMIN') {
+      throw new BadRequestException('Acesso administrativo necessário');
+    }
+  }
+
+  async analyzeSharedEdital(file: Express.Multer.File, userId: string) {
+    await this.assertAdmin(userId);
+    if (!file) throw new BadRequestException('Selecione um PDF');
+    if (file.size > 20 * 1024 * 1024) throw new BadRequestException('O PDF deve ter no máximo 20 MB');
+
+    try {
+      const parser = new PDFParse({ data: file.buffer });
+      const parsed = await parser.getText();
+      await parser.destroy();
+      const sourceText = parsed.text?.trim();
+      if (!sourceText || sourceText.length < 500) {
+        throw new BadRequestException('Não foi possível extrair texto suficiente deste PDF');
+      }
+      const extraction = await this.ai.extractEditalDetails(sourceText);
+      const title = extraction.organization?.trim() || file.originalname.replace(/\.pdf$/i, '');
+      const board = extraction.board?.trim() || null;
+      const examDate = extraction.examDate && !Number.isNaN(new Date(extraction.examDate).getTime())
+        ? new Date(extraction.examDate)
+        : null;
+      return this.database.sharedEdital.create({
+        data: {
+          title,
+          board,
+          examDate,
+          status: 'REVIEW',
+          extraction: extraction as object,
+          sourceText,
+        },
+      });
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      console.error('Erro ao analisar edital compartilhado:', error);
+      throw new BadRequestException('Não foi possível analisar este edital');
+    }
+  }
+
+  async getAdminEdital(editalId: string) {
+    const edital = await this.database.sharedEdital.findUnique({ where: { id: editalId } });
+    if (!edital) throw new NotFoundException('Edital não encontrado');
+    return edital;
+  }
+
+  async updateAdminEdital(editalId: string, body: Record<string, unknown>) {
+    await this.getAdminEdital(editalId);
+    const data: Record<string, unknown> = {};
+    if (typeof body.title === 'string' && body.title.trim()) data.title = body.title.trim();
+    if (typeof body.board === 'string') data.board = body.board.trim() || null;
+    if (typeof body.examDate === 'string') {
+      const parsed = body.examDate ? new Date(body.examDate) : null;
+      if (parsed && Number.isNaN(parsed.getTime())) throw new BadRequestException('Data da prova inválida');
+      data.examDate = parsed;
+    }
+    if (body.extraction && typeof body.extraction === 'object') data.extraction = body.extraction;
+    return this.database.sharedEdital.update({ where: { id: editalId }, data });
+  }
+
+  async setAdminEditalStatus(editalId: string, status: 'PUBLISHED' | 'ARCHIVED') {
+    const edital = await this.getAdminEdital(editalId);
+    if (status === 'PUBLISHED') {
+      const extraction = edital.extraction as unknown as EditalExtraction | null;
+      if (!extraction?.jobs?.length) {
+        throw new BadRequestException('Revise o edital: é necessário ter ao menos um cargo antes de publicar');
+      }
+    }
+    return this.database.sharedEdital.update({ where: { id: editalId }, data: { status } });
+  }
+
   async findAllForUser(userId: string) {
     return this.database.contest.findMany({
       where: { userId },
@@ -168,27 +263,29 @@ export class ContestsService {
     const board = (data.board || '').trim();
     const editalText = (data.editalText || '').trim();
 
-    if (!targetJob && !editalText) {
+    if (!targetJob && !editalText && !data.templateId) {
       throw new BadRequestException('Cargo pretendido é obrigatório');
     }
 
-    const template = data.templateId
-      ? CONTEST_CATALOG.find((item) => item.id === data.templateId)
+    const sharedTemplate = data.templateId
+      ? await this.database.sharedEdital.findFirst({
+          where: { id: data.templateId, status: 'PUBLISHED' },
+        })
       : null;
+    if (data.templateId && !sharedTemplate) {
+      throw new NotFoundException('Edital não encontrado no catálogo publicado');
+    }
+    const templateExtraction = sharedTemplate?.extraction as unknown as EditalExtraction | null;
 
-    const extraction = data.extraction || (editalText ? await this.ai.extractEditalDetails(editalText) : null);
-    const structure = extraction
-      ? { subjects: [] }
-      : template
-      ? { subjects: template.subjects }
-      : { subjects: [] };
+    const extraction = data.extraction || templateExtraction || (editalText ? await this.ai.extractEditalDetails(editalText) : null);
+    const structure = { subjects: [] as StructuredSubject[] };
 
-    const resolvedName = name || template?.name || 'Plano Personalizado';
-    const resolvedBoard = board || extraction?.board || template?.board || 'Banca não informada';
-    const resolvedExamDate = data.examDate || extraction?.examDate || template?.examDate || null;
+    const resolvedName = name || sharedTemplate?.title || 'Plano Personalizado';
+    const resolvedBoard = board || extraction?.board || sharedTemplate?.board || 'Banca não informada';
+    const resolvedExamDate = data.examDate || extraction?.examDate || sharedTemplate?.examDate?.toISOString() || null;
 
-    const source = data.editalSource || (editalText ? 'TEXT' : template ? 'CATALOG' : undefined);
-    const needsReview = Boolean(editalText) && source !== 'CATALOG';
+    const source = data.editalSource || (editalText ? 'TEXT' : sharedTemplate ? 'CATALOG' : undefined);
+    const needsReview = Boolean(extraction?.jobs?.length) && !targetJob;
     const contest = await this.database.contest.create({
       data: {
         userId,
