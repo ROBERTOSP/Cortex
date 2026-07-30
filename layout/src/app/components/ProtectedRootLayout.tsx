@@ -19,7 +19,7 @@ type RoutineStateResponse = {
 
 export function ProtectedRootLayout() {
   const location = useLocation();
-  const { token, isReady } = useAuth();
+  const { token, isReady, user } = useAuth();
   const [profileReady, setProfileReady] = useState(false);
   const [legacyOnboardingCompleted, setLegacyOnboardingCompleted] = useState(false);
   const [routineOnboardingCompleted, setRoutineOnboardingCompleted] = useState(false);
@@ -76,6 +76,10 @@ export function ProtectedRootLayout() {
 
   if (!profileReady) {
     return null;
+  }
+
+  if (user?.role === "ADMIN" && !location.pathname.startsWith("/app/admin/")) {
+    return <Navigate to="/app/admin/editais" replace />;
   }
 
   const isOnboardingRoute =

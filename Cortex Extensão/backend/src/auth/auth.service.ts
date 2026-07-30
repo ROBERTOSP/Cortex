@@ -69,7 +69,7 @@ export class AuthService {
     return saved.length === derived.length && timingSafeEqual(saved, derived);
   }
 
-  private issueSession(user: { id: string; email: string; name: string | null; avatarUrl: string | null }) {
+  private issueSession(user: { id: string; email: string; name: string | null; avatarUrl: string | null; role: string }) {
     return {
       user,
       token: this.jwtService.sign({ sub: user.id, email: user.email }),
@@ -127,7 +127,7 @@ export class AuthService {
         city,
         availableOtherStates: payload.availableOtherStates,
       },
-      select: { id: true, email: true, name: true, avatarUrl: true },
+      select: { id: true, email: true, name: true, avatarUrl: true, role: true },
     });
     return this.issueSession(user);
   }
@@ -137,7 +137,7 @@ export class AuthService {
     this.assertPassword(payload?.password);
     const user = await this.database.user.findUnique({
       where: { email },
-      select: { id: true, email: true, name: true, avatarUrl: true, passwordHash: true },
+      select: { id: true, email: true, name: true, avatarUrl: true, role: true, passwordHash: true },
     });
     if (!user?.passwordHash || !(await this.verifyPassword(payload.password, user.passwordHash))) {
       throw new UnauthorizedException('E-mail ou senha incorretos.');
