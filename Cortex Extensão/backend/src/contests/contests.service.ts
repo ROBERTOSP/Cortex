@@ -14,6 +14,75 @@ type StructuredSubject = {
 
 type EditalSource = 'CATALOG' | 'TEXT' | 'PDF' | 'LINK';
 
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function assertValidEditalExtraction(value: unknown): asserts value is EditalExtraction {
+  if (!value || typeof value !== 'object') {
+    throw new BadRequestException('Estrutura do edital inválida');
+  }
+  const extraction = value as Record<string, unknown>;
+  if (!Array.isArray(extraction.jobs)) {
+    throw new BadRequestException('Estrutura do edital inválida');
+  }
+  if (
+    extraction.generalEligibilityRequirements !== undefined &&
+    !isStringArray(extraction.generalEligibilityRequirements)
+  ) {
+    throw new BadRequestException('Estrutura do edital inválida');
+  }
+  if (extraction.notices !== undefined && !isStringArray(extraction.notices)) {
+    throw new BadRequestException('Estrutura do edital inválida');
+  }
+
+  for (const rawJob of extraction.jobs) {
+    if (!rawJob || typeof rawJob !== 'object') {
+      throw new BadRequestException('Estrutura do edital inválida');
+    }
+    const job = rawJob as Record<string, unknown>;
+    if (
+      typeof job.name !== 'string' ||
+      !job.name.trim() ||
+      !isStringArray(job.requirements) ||
+      !Array.isArray(job.subjects)
+    ) {
+      throw new BadRequestException('Estrutura do edital inválida');
+    }
+    for (const key of ['tasks', 'quotas', 'pcd', 'notes'] as const) {
+      if (job[key] !== undefined && !isStringArray(job[key])) {
+        throw new BadRequestException('Estrutura do edital inválida');
+      }
+    }
+    for (const rawSubject of job.subjects) {
+      if (!rawSubject || typeof rawSubject !== 'object') {
+        throw new BadRequestException('Estrutura do edital inválida');
+      }
+      const subject = rawSubject as Record<string, unknown>;
+      if (
+        typeof subject.name !== 'string' ||
+        !subject.name.trim() ||
+        !Array.isArray(subject.topics)
+      ) {
+        throw new BadRequestException('Estrutura do edital inválida');
+      }
+      for (const rawTopic of subject.topics) {
+        if (!rawTopic || typeof rawTopic !== 'object') {
+          throw new BadRequestException('Estrutura do edital inválida');
+        }
+        const topic = rawTopic as Record<string, unknown>;
+        if (
+          typeof topic.name !== 'string' ||
+          !topic.name.trim() ||
+          !isStringArray(topic.subtopics)
+        ) {
+          throw new BadRequestException('Estrutura do edital inválida');
+        }
+      }
+    }
+  }
+}
+
 type CatalogContest = {
   id: string;
   name: string;
@@ -211,7 +280,10 @@ export class ContestsService {
       if (parsed && Number.isNaN(parsed.getTime())) throw new BadRequestException('Data da prova inválida');
       data.examDate = parsed;
     }
-    if (body.extraction && typeof body.extraction === 'object') data.extraction = body.extraction;
+    if (body.extraction !== undefined) {
+      assertValidEditalExtraction(body.extraction);
+      data.extraction = body.extraction;
+    }
     return this.database.sharedEdital.update({ where: { id: editalId }, data });
   }
 
@@ -221,6 +293,32 @@ export class ContestsService {
       const extraction = edital.extraction as unknown as EditalExtraction | null;
       if (!extraction?.jobs?.length) {
         throw new BadRequestException('Revise o edital: é necessário ter ao menos um cargo antes de publicar');
+      }
+      assertValidEditalExtraction(extraction);
+      const missingRequirements = extraction.jobs
+        .filter((job) => !job.requirements.some((item) => item.trim()))
+        .map((job) => job.name);
+      if (missingRequirements.length) {
+        throw new BadRequestException(
+          `Requisitos não revisados: ${missingRequirements.join(', ')}`,
+        );
+      }
+      const incompleteContent = extraction.jobs
+        .filter(
+          (job) =>
+            !job.subjects.length ||
+            job.subjects.some(
+              (subject) =>
+                !subject.name.trim() ||
+                !subject.topics.length ||
+                subject.topics.some((topic) => !topic.name.trim()),
+            ),
+        )
+        .map((job) => job.name);
+      if (incompleteContent.length) {
+        throw new BadRequestException(
+          `Conteúdo programático incompleto: ${incompleteContent.join(', ')}`,
+        );
       }
     }
     return this.database.sharedEdital.update({ where: { id: editalId }, data: { status } });

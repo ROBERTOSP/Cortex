@@ -40,9 +40,9 @@ A personalização deve ser construída por comportamento observado — retenç�
 - [x] Persistir a extração e publicar o edital no catálogo.
 - [x] Permitir arquivar e republicar o edital.
 - [ ] Criar dashboard administrativo real, separado do dashboard do aluno.
-- [ ] Permitir editar cargos, requisitos, matérias, tópicos e subtópicos extraídos.
+- [x] Permitir editar cargos, requisitos, matérias, tópicos e subtópicos extraídos.
 - [ ] Exibir origem, versão, responsável, data e custo de cada análise.
-- [ ] Bloquear publicação enquanto houver campos críticos não revisados.
+- [x] Bloquear publicação enquanto houver campos críticos não revisados.
 - [ ] Suportar retificação com versão, comparação e reprocessamento parcial.
 - [ ] Resolver cada item confirmado contra a taxonomia de questões.
 - [ ] Criar trilha de auditoria de alterações e publicação.

@@ -7,19 +7,23 @@ import {
   FileUp,
   LayoutDashboard,
   LogOut,
+  Plus,
   RefreshCw,
   ShieldCheck,
+  Trash2,
   Users,
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { apiFetch } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
 import { DisplayPreferences } from "../components/DisplayPreferences";
 
-type Subject = { name: string; topics?: Array<{ name: string; subtopics?: string[] }> };
-type Job = { name: string; baseJob?: string; requirements?: string[]; taskSummary?: string; tasks?: string[]; vacancies?: string | null; quotas?: string[]; pcd?: string[]; notes?: string[]; subjects?: Subject[] };
-type Extraction = { jobs?: Job[]; summary?: string; generalEligibilityRequirements?: string[]; notices?: string[] };
+type Topic = { name: string; subtopics: string[] };
+type Subject = { name: string; topics: Topic[] };
+type Job = { name: string; baseJob?: string | null; profileName?: string | null; requirements: string[]; taskSummary?: string | null; tasks: string[]; vacancies?: string | null; quotas: string[]; pcd: string[]; notes: string[]; subjects: Subject[] };
+type Extraction = { jobs: Job[]; summary: string; board?: string | null; organization?: string | null; examDate?: string | null; generalEligibilityRequirements: string[]; notices: string[] };
 type Edital = {
   id: string;
   title: string;
@@ -48,13 +52,15 @@ export function AdminEditals() {
   const [processing, setProcessing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ title: "", board: "", examDate: "" });
+  const [draft, setDraft] = useState<Extraction | null>(null);
 
   const selected = editals.find((item) => item.id === selectedId) || null;
-  const jobs = selected?.extraction?.jobs || [];
+  const jobs = draft?.jobs || [];
   const subjectCount = useMemo(
     () => jobs.reduce((total, job) => total + (job.subjects?.length || 0), 0),
     [jobs],
   );
+  const reviewIssues = useMemo(() => getReviewIssues(draft), [draft]);
 
   async function load(preferredId?: string) {
     setLoading(true);
@@ -87,6 +93,30 @@ export function AdminEditals() {
       board: selected.board || "",
       examDate: selected.examDate ? selected.examDate.slice(0, 10) : "",
     });
+    const extraction = selected.extraction;
+    setDraft({
+      summary: extraction?.summary || "",
+      board: selected.board || null,
+      organization: null,
+      examDate: selected.examDate?.slice(0, 10) || null,
+      generalEligibilityRequirements: extraction?.generalEligibilityRequirements || [],
+      notices: extraction?.notices || [],
+      jobs: (extraction?.jobs || []).map((job) => ({
+        ...job,
+        requirements: job.requirements || [],
+        tasks: job.tasks || [],
+        quotas: job.quotas || [],
+        pcd: job.pcd || [],
+        notes: job.notes || [],
+        subjects: (job.subjects || []).map((subject) => ({
+          ...subject,
+          topics: (subject.topics || []).map((topic) => ({
+            ...topic,
+            subtopics: topic.subtopics || [],
+          })),
+        })),
+      })),
+    });
   }, [selectedId, selected?.updatedAt]);
 
   async function analyze(file?: File) {
@@ -118,7 +148,7 @@ export function AdminEditals() {
     try {
       await apiFetch(`/contests/admin/editals/${selected.id}`, {
         method: "PATCH",
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, extraction: draft }),
       });
       setNotice("Alterações salvas.");
       await load(selected.id);
@@ -134,6 +164,12 @@ export function AdminEditals() {
     setSaving(true);
     setError("");
     try {
+      if (action === "publish") {
+        await apiFetch(`/contests/admin/editals/${selected.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ ...form, extraction: draft }),
+        });
+      }
       await apiFetch(`/contests/admin/editals/${selected.id}/${action}`, { method: "POST" });
       setNotice(action === "publish" ? "Edital publicado no catálogo dos alunos." : "Edital arquivado.");
       await load(selected.id);
@@ -212,13 +248,12 @@ export function AdminEditals() {
                   <label className="grid gap-1.5 text-sm font-medium">Banca<Input value={form.board} onChange={(event) => setForm({ ...form, board: event.target.value })} /></label>
                   <label className="grid gap-1.5 text-sm font-medium">Data da prova<Input type="date" value={form.examDate} onChange={(event) => setForm({ ...form, examDate: event.target.value })} /></label>
                 </div>
-                {selected.extraction?.summary && <div className="mt-5 rounded-xl bg-muted/50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Resumo</p><p className="mt-2 text-sm">{selected.extraction.summary}</p></div>}
-                <div className="mt-6"><h3 className="font-semibold">Cargos e perfis extraídos</h3><div className="mt-3 grid gap-3 md:grid-cols-2">{jobs.map((job) => <details key={job.name} className="rounded-xl border p-4"><summary className="cursor-pointer"><strong className="block">{job.name}</strong><span className="mt-2 block text-sm text-muted-foreground">{job.requirements?.join(" · ") || "Requisito não identificado"}</span><span className="mt-3 block text-xs font-medium text-primary">{job.subjects?.length || 0} matérias</span></summary><AdminInfo title="Vagas e localidades" values={job.vacancies ? [job.vacancies] : []} /><AdminInfo title="Reserva de vagas" values={job.quotas} /><AdminInfo title="Pessoas com deficiência" values={job.pcd} /><AdminInfo title="Atribuições" values={job.tasks} /><AdminInfo title="Observações" values={job.notes} /><div className="mt-4"><p className="text-xs font-semibold uppercase text-muted-foreground">Matérias, tópicos e subtópicos</p><div className="mt-2 space-y-2">{(job.subjects || []).map((subject) => <div key={subject.name} className="rounded-lg bg-muted/50 p-3 text-sm"><strong>{subject.name}</strong><ul className="mt-2 space-y-1 text-xs text-muted-foreground">{(subject.topics || []).map((topic) => <li key={topic.name}>{topic.name}{topic.subtopics?.length ? ` — ${topic.subtopics.join(" · ")}` : ""}</li>)}</ul></div>)}</div></div></details>)}</div></div>
-                <div className="mt-6 grid gap-4 md:grid-cols-2"><AdminPanel title="Requisitos gerais" values={selected.extraction?.generalEligibilityRequirements} /><AdminPanel title="Avisos importantes" values={selected.extraction?.notices} /></div>
+                {draft && <EditalEditor value={draft} onChange={setDraft} />}
+                {!!reviewIssues.length && <div className="mt-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4"><h3 className="font-semibold">Pendências antes da publicação</h3><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{reviewIssues.map((issue) => <li key={issue}>• {issue}</li>)}</ul></div>}
                 <div className="mt-6 flex flex-wrap justify-end gap-2 border-t pt-5">
                   {selected.status !== "ARCHIVED" && <Button variant="outline" onClick={() => changeStatus("archive")} disabled={saving}><Archive /> Arquivar</Button>}
-                  <Button variant="outline" onClick={save} disabled={saving || !form.title.trim()}>Salvar revisão</Button>
-                  {selected.status !== "PUBLISHED" && <Button onClick={() => changeStatus("publish")} disabled={saving || !jobs.length}><CheckCircle2 /> Publicar no catálogo</Button>}
+                  <Button variant="outline" onClick={save} disabled={saving || !form.title.trim() || !draft}>Salvar revisão</Button>
+                  {selected.status !== "PUBLISHED" && <Button onClick={() => changeStatus("publish")} disabled={saving || !!reviewIssues.length}><CheckCircle2 /> Salvar e publicar</Button>}
                 </div>
               </>}
             </section>
@@ -233,12 +268,129 @@ function Metric({ label, value }: { label: string; value: number }) {
   return <div className="rounded-xl border bg-card p-4"><span className="text-sm text-muted-foreground">{label}</span><strong className="mt-1 block text-2xl">{value}</strong></div>;
 }
 
-function AdminInfo({ title, values }: { title: string; values?: string[] | null }) {
-  if (!values?.length) return null;
-  return <div className="mt-4"><p className="text-xs font-semibold uppercase text-muted-foreground">{title}</p><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{values.map((value) => <li key={value}>• {value}</li>)}</ul></div>;
+function lines(value: string[]) {
+  return value.join("\n");
 }
 
-function AdminPanel({ title, values }: { title: string; values?: string[] | null }) {
-  if (!values?.length) return null;
-  return <div className="rounded-xl border p-4"><h3 className="font-semibold">{title}</h3><ul className="mt-3 space-y-2 text-sm text-muted-foreground">{values.map((value) => <li key={value}>• {value}</li>)}</ul></div>;
+function fromLines(value: string) {
+  return value.split("\n").map((item) => item.trim()).filter(Boolean);
+}
+
+function getReviewIssues(value: Extraction | null) {
+  if (!value?.jobs.length) return ["Adicione ao menos um cargo."];
+  const issues: string[] = [];
+  value.jobs.forEach((job) => {
+    const label = job.name.trim() || "Cargo sem nome";
+    if (!job.name.trim()) issues.push("Há um cargo sem nome.");
+    if (!job.requirements.some((item) => item.trim())) issues.push(`${label}: informe o requisito específico.`);
+    if (!job.subjects.length) issues.push(`${label}: adicione o conteúdo programático.`);
+    job.subjects.forEach((subject) => {
+      if (!subject.name.trim()) issues.push(`${label}: há uma matéria sem nome.`);
+      if (!subject.topics.length) issues.push(`${label} / ${subject.name || "matéria"}: adicione ao menos um tópico.`);
+      if (subject.topics.some((topic) => !topic.name.trim())) issues.push(`${label} / ${subject.name || "matéria"}: há um tópico sem nome.`);
+    });
+  });
+  return [...new Set(issues)];
+}
+
+function EditalEditor({ value, onChange }: { value: Extraction; onChange: (value: Extraction) => void }) {
+  const updateJob = (index: number, job: Job) =>
+    onChange({ ...value, jobs: value.jobs.map((item, itemIndex) => itemIndex === index ? job : item) });
+  const removeJob = (index: number) => {
+    if (!window.confirm("Remover este cargo e todo o conteúdo associado?")) return;
+    onChange({ ...value, jobs: value.jobs.filter((_, itemIndex) => itemIndex !== index) });
+  };
+  const addJob = () => onChange({
+    ...value,
+    jobs: [...value.jobs, { name: "Novo cargo", requirements: [], tasks: [], vacancies: null, quotas: [], pcd: [], notes: [], subjects: [] }],
+  });
+
+  return <div className="mt-6 space-y-6">
+    <section className="grid gap-4 rounded-xl border p-4 md:grid-cols-2">
+      <label className="grid gap-1.5 text-sm font-medium md:col-span-2">Resumo para o aluno
+        <Textarea value={value.summary} onChange={(event) => onChange({ ...value, summary: event.target.value })} />
+      </label>
+      <ListField label="Requisitos gerais" value={value.generalEligibilityRequirements} onChange={(items) => onChange({ ...value, generalEligibilityRequirements: items })} />
+      <ListField label="Avisos importantes" value={value.notices} onChange={(items) => onChange({ ...value, notices: items })} />
+    </section>
+
+    <section>
+      <div className="flex items-center justify-between gap-3">
+        <div><h3 className="font-semibold">Cargos e perfis</h3><p className="text-sm text-muted-foreground">Revise cada requisito e conteúdo antes de publicar.</p></div>
+        <Button type="button" variant="outline" size="sm" onClick={addJob}><Plus /> Adicionar cargo</Button>
+      </div>
+      <div className="mt-3 space-y-4">
+        {value.jobs.map((job, index) => (
+          <JobEditor key={`${index}-${job.name}`} value={job} onChange={(next) => updateJob(index, next)} onRemove={() => removeJob(index)} />
+        ))}
+      </div>
+    </section>
+  </div>;
+}
+
+function JobEditor({ value, onChange, onRemove }: { value: Job; onChange: (value: Job) => void; onRemove: () => void }) {
+  const updateSubject = (index: number, subject: Subject) =>
+    onChange({ ...value, subjects: value.subjects.map((item, itemIndex) => itemIndex === index ? subject : item) });
+  const addSubject = () => onChange({ ...value, subjects: [...value.subjects, { name: "Nova matéria", topics: [] }] });
+  const removeSubject = (index: number) => {
+    if (!window.confirm("Remover esta matéria e seus tópicos?")) return;
+    onChange({ ...value, subjects: value.subjects.filter((_, itemIndex) => itemIndex !== index) });
+  };
+
+  return <details open className="rounded-xl border bg-card p-4">
+    <summary className="cursor-pointer font-semibold">{value.name || "Cargo sem nome"} · {value.subjects.length} matérias</summary>
+    <div className="mt-5 grid gap-4 md:grid-cols-2">
+      <label className="grid gap-1.5 text-sm font-medium md:col-span-2">Nome do cargo/perfil
+        <Input value={value.name} onChange={(event) => onChange({ ...value, name: event.target.value })} />
+      </label>
+      <ListField label="Requisitos específicos do cargo" value={value.requirements} onChange={(items) => onChange({ ...value, requirements: items })} />
+      <label className="grid gap-1.5 text-sm font-medium">Vagas e localidades
+        <Textarea value={value.vacancies || ""} onChange={(event) => onChange({ ...value, vacancies: event.target.value || null })} />
+      </label>
+      <ListField label="Reserva de vagas/cotas" value={value.quotas} onChange={(items) => onChange({ ...value, quotas: items })} />
+      <ListField label="Regras para PCD" value={value.pcd} onChange={(items) => onChange({ ...value, pcd: items })} />
+      <ListField label="Atribuições" value={value.tasks} onChange={(items) => onChange({ ...value, tasks: items })} />
+      <ListField label="Observações" value={value.notes} onChange={(items) => onChange({ ...value, notes: items })} />
+    </div>
+    <div className="mt-5 border-t pt-5">
+      <div className="flex items-center justify-between gap-3">
+        <h4 className="font-semibold">Conteúdo programático</h4>
+        <Button type="button" variant="outline" size="sm" onClick={addSubject}><Plus /> Matéria</Button>
+      </div>
+      <div className="mt-3 space-y-3">
+        {value.subjects.map((subject, index) => (
+          <SubjectEditor key={`${index}-${subject.name}`} value={subject} onChange={(next) => updateSubject(index, next)} onRemove={() => removeSubject(index)} />
+        ))}
+        {!value.subjects.length && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">Adicione ao menos uma matéria com um tópico para publicar.</p>}
+      </div>
+    </div>
+    <div className="mt-5 flex justify-end"><Button type="button" variant="ghost" className="text-destructive" onClick={onRemove}><Trash2 /> Remover cargo</Button></div>
+  </details>;
+}
+
+function SubjectEditor({ value, onChange, onRemove }: { value: Subject; onChange: (value: Subject) => void; onRemove: () => void }) {
+  const updateTopic = (index: number, topic: Topic) =>
+    onChange({ ...value, topics: value.topics.map((item, itemIndex) => itemIndex === index ? topic : item) });
+  return <div className="rounded-lg bg-muted/40 p-4">
+    <div className="flex gap-2">
+      <Input aria-label="Nome da matéria" value={value.name} onChange={(event) => onChange({ ...value, name: event.target.value })} />
+      <Button type="button" variant="ghost" size="icon" aria-label="Remover matéria" onClick={onRemove}><Trash2 /></Button>
+    </div>
+    <div className="mt-3 space-y-2">
+      {value.topics.map((topic, index) => (
+        <div key={`${index}-${topic.name}`} className="grid gap-2 rounded-lg border bg-background p-3 md:grid-cols-2">
+          <label className="grid gap-1 text-xs font-medium">Tópico<Input value={topic.name} onChange={(event) => updateTopic(index, { ...topic, name: event.target.value })} /></label>
+          <div className="flex items-end gap-2">
+            <label className="grid flex-1 gap-1 text-xs font-medium">Subtópicos, um por linha<Textarea className="min-h-10" value={lines(topic.subtopics)} onChange={(event) => updateTopic(index, { ...topic, subtopics: fromLines(event.target.value) })} /></label>
+            <Button type="button" variant="ghost" size="icon" aria-label="Remover tópico" onClick={() => onChange({ ...value, topics: value.topics.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 /></Button>
+          </div>
+        </div>
+      ))}
+      <Button type="button" variant="ghost" size="sm" onClick={() => onChange({ ...value, topics: [...value.topics, { name: "Novo tópico", subtopics: [] }] })}><Plus /> Adicionar tópico</Button>
+    </div>
+  </div>;
+}
+
+function ListField({ label, value, onChange }: { label: string; value: string[]; onChange: (value: string[]) => void }) {
+  return <label className="grid gap-1.5 text-sm font-medium">{label}<span className="text-xs font-normal text-muted-foreground">Um item por linha</span><Textarea value={lines(value)} onChange={(event) => onChange(fromLines(event.target.value))} /></label>;
 }
