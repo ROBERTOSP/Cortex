@@ -140,7 +140,11 @@ A personalização deve ser construída por comportamento observado — retenç�
 
 ## Fase 8 — Questões de treino e caderno de erros
 
-- [x] Definir que questões exibidas ao aluno serão autorais, geradas como rascunho por IA e publicadas somente após revisão humana.
+> **Política atual:** exibir ao usuário somente questões com direitos `AUTHORIZED` ou `LICENSED`. Questões com qualquer outro status permanecem restritas e não podem participar do diagnóstico ou dos treinos.
+>
+> **Evolução futura:** criar um acervo próprio do Cortex. A IA poderá gerar rascunhos de questões alinhados ao edital, cargo, tópico e perfil da banca, mas nenhuma questão será publicada automaticamente: conteúdo, alternativas, gabarito, explicação e originalidade deverão passar por revisão humana e aprovação administrativa.
+
+- [x] Restringir diagnóstico e treino a questões `AUTHORIZED` ou `LICENSED`.
 - [ ] Criar modelo editorial de questão autoral e revisão.
 - [ ] Criar catálogo-semente pequeno para concursos do beta.
 - [ ] Gerar rascunhos por habilidade, sem reproduzir questão de terceiro.
