@@ -2,6 +2,9 @@ import { QuestionsService } from './questions.service';
 
 describe('QuestionsService', () => {
   const database: any = {
+    contest: {
+      findFirst: jest.fn(),
+    },
     question: {
       count: jest.fn(),
       findFirst: jest.fn(),
@@ -50,7 +53,34 @@ describe('QuestionsService', () => {
     });
   });
 
-  it('getDiagnosticQuestions distribui questões entre matérias e exclui as já respondidas', async () => {
+  it('getDiagnosticQuestions cruza o cargo ativo, taxonomia, banca e direitos autorizados', async () => {
+    database.contest.findFirst.mockResolvedValue({
+      id: 'c1',
+      name: 'Concurso',
+      targetJob: 'Analista',
+      selectedJob: 'Analista - TI',
+      board: 'FGV',
+      nodes: [
+        {
+          id: 's1',
+          parentId: null,
+          name: 'Português',
+          type: 'SUBJECT',
+          taxonomyStatus: 'MATCHED',
+          taxonomyMatch: { candidates: [{ id: 'subject-pt', name: 'Português' }] },
+          strategicPriority: 70,
+        },
+        {
+          id: 't1',
+          parentId: 's1',
+          name: 'Interpretação',
+          type: 'TOPIC',
+          taxonomyStatus: 'MATCHED',
+          taxonomyMatch: { candidates: [{ id: 'topic-interpretacao', name: 'Interpretação' }] },
+          strategicPriority: 90,
+        },
+      ],
+    });
     database.question.findMany = jest.fn().mockResolvedValue([
       {
         id: 'q1',
@@ -85,22 +115,73 @@ describe('QuestionsService', () => {
       where: expect.objectContaining({
         annulled: false,
         outdated: false,
+        board: { canonicalKey: 'fgv' },
+        provenance: { is: { rightsStatus: { in: ['AUTHORIZED', 'LICENSED'] } } },
         attempts: { none: { userId: 'u1' } },
       }),
     }));
     expect(res.questions.map((question) => question.id)).toEqual(['q1', 'q3', 'q2']);
     expect(res.total).toBe(3);
+    expect(res.coverage.status).toBe('READY');
+    expect(res.context).toEqual(expect.objectContaining({
+      contestId: 'c1',
+      targetJob: 'Analista - TI',
+      board: 'FGV',
+    }));
   });
 
-  it('getDiagnosticQuestions limita a quantidade solicitada', async () => {
+  it('getDiagnosticQuestions não usa questões genéricas quando a taxonomia não tem correspondência', async () => {
+    database.contest.findFirst.mockResolvedValue({
+      id: 'c1',
+      name: 'Concurso',
+      targetJob: 'Analista',
+      selectedJob: 'Analista',
+      board: 'FGV',
+      nodes: [{
+        id: 's1',
+        parentId: null,
+        name: 'Disciplina inédita',
+        type: 'SUBJECT',
+        taxonomyStatus: 'UNMATCHED',
+        taxonomyMatch: null,
+        strategicPriority: 0,
+      }],
+    });
+    database.question.findMany = jest.fn();
+    const service = new QuestionsService(database, ai);
+
+    const result = await service.getDiagnosticQuestions('u1', 8);
+
+    expect(database.question.findMany).not.toHaveBeenCalled();
+    expect(result.questions).toEqual([]);
+    expect(result.coverage.status).toBe('INSUFFICIENT');
+    expect(result.coverage.reason).toMatch(/taxonomia/i);
+  });
+
+  it('getDiagnosticQuestions não exibe acervo sem licença', async () => {
+    database.contest.findFirst.mockResolvedValue({
+      id: 'c1',
+      name: 'Concurso',
+      targetJob: 'Analista',
+      selectedJob: 'Analista',
+      board: 'FGV',
+      nodes: [{
+        id: 's1',
+        parentId: null,
+        name: 'Português',
+        type: 'SUBJECT',
+        taxonomyStatus: 'MATCHED',
+        taxonomyMatch: { candidates: [{ id: 'subject-pt', name: 'Português' }] },
+        strategicPriority: 50,
+      }],
+    });
     database.question.findMany = jest.fn().mockResolvedValue([]);
     const service = new QuestionsService(database, ai);
 
-    await service.getDiagnosticQuestions('u1', 100);
+    const result = await service.getDiagnosticQuestions('u1', 8);
 
-    expect(database.question.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 60 }),
-    );
+    expect(result.coverage.status).toBe('INSUFFICIENT');
+    expect(result.coverage.reason).toMatch(/autorizadas/i);
   });
 
   it('submitAnswer calcula isCorrect e persiste attempt', async () => {

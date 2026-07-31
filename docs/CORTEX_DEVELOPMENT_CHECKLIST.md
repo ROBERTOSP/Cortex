@@ -59,7 +59,7 @@ A personalização deve ser construída por comportamento observado — retenç�
 - [x] Calcular capacidade semanal inicial.
 - [x] Exibir diagnóstico estratégico inicial na etapa 5.
 - [ ] Substituir autodeclaração isolada de nível por diagnóstico curto opcional.
-- [x] Aplicar 8 questões distribuídas entre matérias disponíveis, sem chamar IA.
+- [x] Aplicar 8 questões autorizadas do cargo, cruzadas com taxonomia e incidência da banca, sem fallback genérico nem chamada de IA.
 - [x] Registrar resposta, acerto, tempo, trocas e indício de hesitação no diagnóstico.
 - [x] Explicar que o resultado define apenas o ponto de partida, não um rótulo.
 - [ ] Transformar a etapa 5 em proposta do primeiro ciclo de sete dias.

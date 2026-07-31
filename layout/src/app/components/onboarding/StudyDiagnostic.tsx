@@ -17,7 +17,23 @@ type DiagnosticSummary = {
   averageLatencyMs: number;
 };
 
-const storageKey = "cortex-onboarding-study-diagnostic";
+type DiagnosticResponse = {
+  questions: DiagnosticQuestion[];
+  context: {
+    contestName: string | null;
+    targetJob: string | null;
+    board: string | null;
+  };
+  coverage: {
+    status: "READY" | "INSUFFICIENT";
+    reason: string | null;
+    matchedSubjects: number;
+    matchedTopics: number;
+    eligibleQuestions: number;
+  };
+};
+
+const storageKey = "cortex-onboarding-study-diagnostic-v2";
 
 export function StudyDiagnostic() {
   const [questions, setQuestions] = useState<DiagnosticQuestion[]>([]);
@@ -37,6 +53,7 @@ export function StudyDiagnostic() {
       return null;
     }
   });
+  const [diagnosticContext, setDiagnosticContext] = useState<DiagnosticResponse["context"] | null>(null);
 
   const current = questions[position];
   const progress = questions.length ? ((position + 1) / questions.length) * 100 : 0;
@@ -53,9 +70,10 @@ export function StudyDiagnostic() {
     setLoading(true);
     setError("");
     try {
-      const response = await apiFetch<{ questions: DiagnosticQuestion[] }>("/questions/diagnostic?limit=8");
-      if (!response.questions.length) {
-        setError("Ainda não há questões disponíveis para este diagnóstico.");
+      const response = await apiFetch<DiagnosticResponse>("/questions/diagnostic?limit=8");
+      setDiagnosticContext(response.context);
+      if (response.coverage.status !== "READY" || response.questions.length !== 8) {
+        setError(response.coverage.reason || "A cobertura autorizada ainda não permite um diagnóstico confiável.");
         return;
       }
       setQuestions(response.questions);
@@ -142,16 +160,24 @@ export function StudyDiagnostic() {
       <div className="mt-6 rounded-2xl border bg-card p-5">
         <h3 className="font-semibold">Descubra seu ponto de partida</h3>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          Responda 8 questões rápidas. Não vale nota: observamos apenas familiaridade, acertos e
-          ritmo para evitar um plano fácil ou pesado demais.
+          O Cortex seleciona 8 questões autorizadas das matérias do seu cargo, priorizadas pela
+          incidência da banca. Não vale nota: observamos familiaridade, acertos e ritmo para calibrar
+          o primeiro ciclo.
         </p>
+        {diagnosticContext && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {diagnosticContext.targetJob} · {diagnosticContext.board}
+          </p>
+        )}
         {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <Button type="button" onClick={start} disabled={loading}>
             {loading && <LoaderCircle className="animate-spin" />}
             {loading ? "Preparando questões" : "Iniciar diagnóstico"}
           </Button>
-          <span className="text-xs text-muted-foreground">Leva cerca de 5 minutos e não usa IA paga.</span>
+          <span className="text-xs text-muted-foreground">
+            Sem questões genéricas, sem conteúdo sem licença e sem chamada de IA paga.
+          </span>
         </div>
       </div>
     );

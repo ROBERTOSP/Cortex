@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { AiService } from '../ai/ai.service';
 import { DatabaseService } from '../database/database.service';
+import { resolveBoardAlias } from './taxonomy-aliases';
 
 export type NextQuestionAlternative = {
   id: string;
@@ -38,6 +39,19 @@ export type SubmitAnswerResponse = {
 export type DiagnosticQuestionsResponse = {
   total: number;
   questions: NextQuestionResponse[];
+  context: {
+    contestId: string | null;
+    contestName: string | null;
+    targetJob: string | null;
+    board: string | null;
+  };
+  coverage: {
+    status: 'READY' | 'INSUFFICIENT';
+    reason: string | null;
+    matchedSubjects: number;
+    matchedTopics: number;
+    eligibleQuestions: number;
+  };
 };
 
 @Injectable()
@@ -86,20 +100,125 @@ export class QuestionsService {
     requestedLimit = 8,
   ): Promise<DiagnosticQuestionsResponse> {
     const limit = Math.min(Math.max(Math.trunc(requestedLimit) || 8, 3), 12);
+    const contest = await this.database.contest.findFirst({
+      where: { userId, status: 'ACTIVE' },
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        targetJob: true,
+        selectedJob: true,
+        board: true,
+        nodes: {
+          select: {
+            id: true,
+            parentId: true,
+            name: true,
+            type: true,
+            taxonomyStatus: true,
+            taxonomyMatch: true,
+            strategicPriority: true,
+          },
+        },
+      },
+    });
+    const context = {
+      contestId: contest?.id ?? null,
+      contestName: contest?.name ?? null,
+      targetJob: contest?.selectedJob || contest?.targetJob || null,
+      board: contest?.board ?? null,
+    };
+    const insufficient = (
+      reason: string,
+      matchedSubjects = 0,
+      matchedTopics = 0,
+    ): DiagnosticQuestionsResponse => ({
+      total: 0,
+      questions: [],
+      context,
+      coverage: {
+        status: 'INSUFFICIENT',
+        reason,
+        matchedSubjects,
+        matchedTopics,
+        eligibleQuestions: 0,
+      },
+    });
+
+    if (!contest?.selectedJob) {
+      return insufficient('Selecione e confirme um cargo do edital antes do diagnóstico.');
+    }
+    const board = resolveBoardAlias(contest.board).canonical;
+    if (!board) {
+      return insufficient('A banca do edital ainda não está vinculada ao perfil estatístico do Cortex.');
+    }
+    const matchedNodes = contest.nodes.filter(
+      (node) => node.taxonomyStatus === 'MATCHED',
+    );
+    const readCandidateId = (value: unknown): string | null => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+      const candidates = (value as { candidates?: unknown }).candidates;
+      if (!Array.isArray(candidates) || candidates.length !== 1) return null;
+      const id = (candidates[0] as { id?: unknown })?.id;
+      return typeof id === 'string' ? id : null;
+    };
+    const subjectNodes = matchedNodes
+      .filter((node) => node.type === 'SUBJECT')
+      .map((node) => ({ ...node, taxonomyId: readCandidateId(node.taxonomyMatch) }))
+      .filter((node): node is typeof node & { taxonomyId: string } => Boolean(node.taxonomyId));
+    const topicNodes = matchedNodes
+      .filter((node) => node.type === 'TOPIC')
+      .map((node) => ({ ...node, taxonomyId: readCandidateId(node.taxonomyMatch) }))
+      .filter((node): node is typeof node & { taxonomyId: string } => Boolean(node.taxonomyId));
+    if (!subjectNodes.length && !topicNodes.length) {
+      return insufficient('As matérias e os tópicos deste cargo ainda não foram vinculados à taxonomia de questões.');
+    }
+
     const candidates = await this.database.question.findMany({
       where: {
         annulled: false,
         outdated: false,
         options: { some: { isCorrect: true } },
         attempts: { none: { userId } },
+        board: { canonicalKey: board.id },
+        provenance: {
+          is: { rightsStatus: { in: ['AUTHORIZED', 'LICENSED'] } },
+        },
+        OR: [
+          { subjectId: { in: subjectNodes.map((node) => node.taxonomyId) } },
+          { topicId: { in: topicNodes.map((node) => node.taxonomyId) } },
+        ],
       },
-      orderBy: { cortexIdNum: 'asc' },
-      take: Math.min(limit * 5, 60),
+      orderBy: [{ year: 'desc' }, { cortexIdNum: 'asc' }],
+      take: Math.min(limit * 10, 120),
       include: {
         subject: { select: { name: true } },
         topic: { select: { name: true } },
         options: { orderBy: { displayOrder: 'asc' } },
       },
+    });
+    if (candidates.length < limit) {
+      return insufficient(
+        `Ainda não há ${limit} questões autorizadas suficientes para este cargo e esta banca.`,
+        subjectNodes.length,
+        topicNodes.length,
+      );
+    }
+
+    const priorityByTaxonomyId = new Map<string, number>([
+      ...subjectNodes.map((node) => [node.taxonomyId, node.strategicPriority] as const),
+      ...topicNodes.map((node) => [node.taxonomyId, node.strategicPriority] as const),
+    ]);
+    candidates.sort((left, right) => {
+      const leftPriority = Math.max(
+        priorityByTaxonomyId.get(left.topicId || '') || 0,
+        priorityByTaxonomyId.get(left.subjectId || '') || 0,
+      );
+      const rightPriority = Math.max(
+        priorityByTaxonomyId.get(right.topicId || '') || 0,
+        priorityByTaxonomyId.get(right.subjectId || '') || 0,
+      );
+      return rightPriority - leftPriority;
     });
 
     const bySubject = new Map<string, typeof candidates>();
@@ -132,6 +251,14 @@ export class QuestionsService {
           text: option.text,
         })),
       })),
+      context,
+      coverage: {
+        status: 'READY',
+        reason: null,
+        matchedSubjects: subjectNodes.length,
+        matchedTopics: topicNodes.length,
+        eligibleQuestions: candidates.length,
+      },
     };
   }
 
