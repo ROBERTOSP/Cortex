@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { computeWeeklyCapacity } from '../routine-engine/engine';
 
@@ -113,6 +113,16 @@ export class PlanningService {
     ]);
 
     const adaptiveInsights = this.buildAdaptiveInsights(attempts);
+    if (!contest) {
+      throw new BadRequestException(
+        'Confirme um edital e um cargo antes de gerar o primeiro ciclo.',
+      );
+    }
+    if (!contest.nodes.length) {
+      throw new BadRequestException(
+        'O cargo selecionado ainda não possui matérias estruturadas e revisadas.',
+      );
+    }
     const editalInsights = (contest?.nodes || []).map((node) => {
       const topTopic = node.children[0];
       const priority = Math.round(node.strategicPriority || topTopic?.strategicPriority || 55);
@@ -123,7 +133,27 @@ export class PlanningService {
       daysSinceLastAttempt: 99, priority, recommendedTaskType: 'reading' as TaskType,
       reason: priority > 0 ? 'Prioridade calculada pela incidência e recência da banca no edital confirmado.' : 'Matéria do edital confirmado. Vamos construir sua base.',
     }; });
-    const insights = editalInsights.length > 0 ? editalInsights : await this.ensureStarterInsights(adaptiveInsights);
+    const adaptiveBySubject = new Map(
+      adaptiveInsights.map((item) => [item.subject, item]),
+    );
+    const insights = editalInsights.map((editalInsight) => {
+      const observed = adaptiveBySubject.get(editalInsight.subject);
+      return observed
+        ? {
+            ...editalInsight,
+            attempts: observed.attempts,
+            accuracy: observed.accuracy,
+            hesitationRate: observed.hesitationRate,
+            avgLatencySeconds: observed.avgLatencySeconds,
+            daysSinceLastAttempt: observed.daysSinceLastAttempt,
+            recommendedTaskType: observed.recommendedTaskType,
+            reason: observed.reason,
+            priority: Math.round(
+              editalInsight.priority * 0.7 + observed.priority * 0.3,
+            ),
+          }
+        : editalInsight;
+    });
     const schedule = routine?.timezone && routine.availabilityWindows.length > 0
       ? this.buildScheduleFromRoutine(insights, routine)
       : this.buildSchedule(insights, profile);
@@ -260,75 +290,6 @@ export class PlanningService {
         }),
       };
     });
-  }
-
-  private async ensureStarterInsights(
-    currentInsights: SubjectInsight[],
-  ): Promise<SubjectInsight[]> {
-    const existingSubjects = new Set(currentInsights.map((item) => item.subject));
-    const targetSubjects = Math.max(4, currentInsights.length);
-
-    if (existingSubjects.size >= targetSubjects) {
-      return [...currentInsights].sort((a, b) => b.priority - a.priority);
-    }
-
-    const starterSubjects = await this.database.questionSubject.findMany({
-      take: 8,
-      orderBy: { name: 'asc' },
-      select: {
-        name: true,
-        topics: {
-          take: 1,
-          orderBy: { name: 'asc' },
-          select: { name: true },
-        },
-      },
-    });
-
-    const fallbackInsights = [...currentInsights];
-
-    for (const subject of starterSubjects) {
-      if (fallbackInsights.length >= targetSubjects) {
-        break;
-      }
-      if (existingSubjects.has(subject.name)) {
-        continue;
-      }
-
-      fallbackInsights.push({
-        subject: subject.name,
-        topic: subject.topics[0]?.name || 'Fundamentos',
-        attempts: 0,
-        accuracy: 0,
-        hesitationRate: 0,
-        avgLatencySeconds: 0,
-        daysSinceLastAttempt: 99,
-        priority: currentInsights.length === 0 ? 55 : 40,
-        recommendedTaskType: currentInsights.length === 0 ? 'reading' : 'questions',
-        reason:
-          currentInsights.length === 0
-            ? 'Matéria adicionada para iniciar sua calibragem de estudos.'
-            : 'Matéria adicionada para ampliar a cobertura do plano semanal.',
-      });
-      existingSubjects.add(subject.name);
-    }
-
-    if (fallbackInsights.length === 0) {
-      fallbackInsights.push({
-        subject: 'Estudo Geral',
-        topic: 'Fundamentos',
-        attempts: 0,
-        accuracy: 0,
-        hesitationRate: 0,
-        avgLatencySeconds: 0,
-        daysSinceLastAttempt: 99,
-        priority: 50,
-        recommendedTaskType: 'reading',
-        reason: 'Plano inicial criado sem historico suficiente para iniciar sua calibragem.',
-      });
-    }
-
-    return fallbackInsights.sort((a, b) => b.priority - a.priority);
   }
 
   private buildSchedule(

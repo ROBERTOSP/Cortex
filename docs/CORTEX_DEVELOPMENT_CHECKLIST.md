@@ -81,6 +81,7 @@ A personalização deve ser construída por comportamento observado — retenç�
 
 ## Fase 4 — Plano adaptativo até a prova
 
+- [x] Bloquear geração sem edital, cargo e matérias confirmados; não usar matérias genéricas como fallback.
 - [ ] Criar entidades persistidas para plano, fases, metas e recomendações.
 - [ ] Calcular capacidade sustentável até a data da prova.
 - [ ] Dividir o percurso em cobertura, consolidação, revisão e reta final.

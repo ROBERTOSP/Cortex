@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { PlanningService } from './planning.service';
 
 describe('PlanningService', () => {
@@ -32,6 +33,13 @@ describe('PlanningService', () => {
   });
 
   it('gera cronograma adaptativo com base em desempenho e atualiza perfil', async () => {
+    database.contest.findFirst.mockResolvedValue({
+      examDate: new Date('2026-12-01T12:00:00Z'),
+      nodes: [
+        { name: 'Direito Constitucional', strategicPriority: 90, children: [{ name: 'Direitos Fundamentais', strategicPriority: 90 }] },
+        { name: 'Português', strategicPriority: 60, children: [{ name: 'Sintaxe', strategicPriority: 60 }] },
+      ],
+    });
     database.user.findUnique.mockResolvedValue({
       id: 'u1',
       dailyStudyHours: 2,
@@ -125,7 +133,7 @@ describe('PlanningService', () => {
     expect(result.insights[0].subject).toBe('Direito Constitucional');
   });
 
-  it('gera cronograma inicial quando ainda não há tentativas', async () => {
+  it('bloqueia cronograma sem edital e cargo confirmados', async () => {
     database.user.findUnique.mockResolvedValue({
       id: 'u1',
       dailyStudyHours: null,
@@ -134,30 +142,10 @@ describe('PlanningService', () => {
       works: false,
     });
     database.questionAttempt.findMany.mockResolvedValue([]);
-    database.questionSubject.findMany.mockResolvedValue([
-      {
-        name: 'Direito Administrativo',
-        topics: [{ name: 'Atos Administrativos' }],
-      },
-      { name: 'Português', topics: [{ name: 'Interpretação de Texto' }] },
-      { name: 'Informática', topics: [{ name: 'Segurança da Informação' }] },
-      { name: 'Raciocínio Lógico', topics: [{ name: 'Argumentação' }] },
-    ]);
-
     const service = new PlanningService(database);
-    const result = await service.generateScheduleForUser('u1', {});
-
-    expect(database.user.update).not.toHaveBeenCalled();
-    expect(result.summary.mode).toBe('inicial');
-    expect(result.profile.dailyStudyHours).toBe(2);
-    expect(result.summary.dailyMinutes).toBe(108);
-    expect(result.summary.blockMinutes).toBe(30);
-    expect(result.schedule.length).toBeGreaterThan(0);
-    expect(result.schedule.some((task: any) => task.type === 'reading')).toBe(
-      true,
-    );
-    expect(result.schedule[0].startsAt).toBe('06:30');
-    expect(result.insights).toHaveLength(4);
+    await expect(service.generateScheduleForUser('u1', {}))
+      .rejects.toBeInstanceOf(BadRequestException);
+    expect(database.questionSubject.findMany).not.toHaveBeenCalled();
   });
 
   it('usa a capacidade e os horários reais da rotina quando ela existe', async () => {
