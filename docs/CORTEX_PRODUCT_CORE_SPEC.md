@@ -4,19 +4,22 @@
 
 Ao abrir o Cortex, o estudante sabe qual é a melhor próxima ação de estudo, por quanto tempo executá-la e por que ela é prioritária agora.
 
-O produto não é um catálogo de conteúdo nem um cronograma estático. É um orientador de aprendizagem explicável que transforma rotina, edital, questões e comportamento em decisões diárias.
+O produto não é um catálogo de conteúdo nem um cronograma estático. É um orientador de aprendizagem explicável que transforma rotina, edital, questões, execução e Notas Cortex em decisões diárias.
+
+O Cortex não atribui ao aluno um estilo fixo de aprendizagem. Ele constrói um perfil dinâmico a partir de evidências: retenção, acerto, latência, confiança, fadiga, duração e execução real.
 
 ## Fluxo do usuário
 
 1. O usuário conhece a proposta e cria a conta.
 2. Define objetivo, cargo, banca e data da prova quando souber.
-3. Escolhe um edital do catálogo ou envia PDF/link direto.
-4. O Cortex extrai e monta o mapa de disciplinas, tópicos e subtópicos; o usuário revisa e confirma esse mapa.
+3. Pesquisa e escolhe um edital previamente analisado e publicado pela equipe no catálogo.
+4. Seleciona o cargo/perfil e confere as informações relevantes; extração, correção e publicação pertencem ao painel administrativo.
 5. Informa a rotina mínima: janelas disponíveis, compromissos, energia e duração confortável de sessão.
-6. O Cortex cruza edital, histórico da banca, banco de questões e capacidade até a prova para criar o plano estratégico.
-7. O usuário chega à Tela Hoje, cuja ação principal é iniciar a recomendação atual.
-8. Executa uma sessão guiada, questões ou revisão.
-9. Registra resultado e check-in; o Cortex atualiza o modelo do estudante e recomenda a próxima ação.
+6. Realiza uma calibração curta opcional para gerar a primeira hipótese de domínio.
+7. O Cortex cruza edital, histórico da banca, diagnóstico e capacidade até a prova para criar o primeiro ciclo de sete dias.
+8. O usuário chega à Tela Hoje, cuja ação principal é iniciar a recomendação atual.
+9. Executa uma sessão guiada, questões, revisão ou atividade ligada às Notas Cortex.
+10. O Cortex registra evidências, atualiza o perfil de aprendizagem e recomenda a próxima ação.
 
 ## Plano até a prova
 
@@ -76,9 +79,21 @@ O replanejamento é contínuo: após uma sessão, questões, check-in, compromis
 
 Toda alteração material deve responder: “o que mudou, por que mudou e qual é o próximo passo?”.
 
+O aluno pode mover, trocar, encurtar, adiar ou rejeitar uma sessão. Antes da alteração, o Cortex explica o impacto; depois, registra a decisão, recalcula somente o necessário e permite desfazer.
+
+## Notas Cortex
+
+Notas Cortex é o espaço de conhecimento pessoal conectado ao plano, não um editor genérico isolado.
+
+Cada nota pode ser associada a concurso, matéria, tópico, subtópico, sessão e fonte. O usuário pode registrar conceitos, resumos, exemplos, dúvidas e erros; transformar trechos em flashcards, perguntas ou revisões; e recuperar o conteúdo pela busca.
+
+A extensão do navegador complementa o módulo web ao capturar seleções por ação explícita, registrar fonte e tempo de uma sessão confirmada e sugerir vínculos com a taxonomia. A IA pode resumir e sugerir organização, mas o usuário confirma classificações incertas.
+
+O tempo de estudo não pode ser inferido apenas porque uma aba permaneceu aberta. Inatividade, mudança de contexto e sessões duvidosas exigem pausa ou confirmação.
+
 ## Limites da primeira vertical validável
 
-O primeiro ciclo não precisa conter extensão, anotações, flashcards, simulados completos ou previsão avançada. Deve conter:
+O primeiro ciclo não precisa conter extensão, Notas Cortex completa, flashcards, simulados completos ou previsão avançada. Deve conter:
 
 1. edital confirmado e mapeado;
 2. perfil estatístico inicial da banca por tópico;
@@ -87,6 +102,8 @@ O primeiro ciclo não precisa conter extensão, anotações, flashcards, simulad
 5. uma recomendação diária explicável;
 6. sessão ou bloco de questões com resultado registrado;
 7. replanejamento da próxima recomendação.
+
+Depois que esse ciclo estiver validado, o MVP web das Notas Cortex é a próxima vertical. A extensão vem depois da sincronização, taxonomia e privacidade das notas estarem estáveis.
 
 ## Métricas do beta
 
