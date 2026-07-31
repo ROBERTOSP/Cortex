@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { QuestionsService } from './questions.service';
 
@@ -10,6 +10,12 @@ export class QuestionsController {
   @Get('next')
   async next() {
     return this.questions.getNextQuestion();
+  }
+
+  @Get('diagnostic')
+  async diagnostic(@Req() req, @Query('limit') limit?: string) {
+    const userId = String(req.user?.sub || '');
+    return this.questions.getDiagnosticQuestions(userId, Number(limit || 8));
   }
 
   @Post('submit')

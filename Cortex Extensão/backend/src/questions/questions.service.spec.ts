@@ -50,6 +50,59 @@ describe('QuestionsService', () => {
     });
   });
 
+  it('getDiagnosticQuestions distribui questões entre matérias e exclui as já respondidas', async () => {
+    database.question.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'q1',
+        cortexIdNum: 1,
+        statement: 'Português 1',
+        subject: { name: 'Português' },
+        topic: { name: 'Interpretação' },
+        options: [{ letter: 'A', text: 'A', displayOrder: 0 }],
+      },
+      {
+        id: 'q2',
+        cortexIdNum: 2,
+        statement: 'Português 2',
+        subject: { name: 'Português' },
+        topic: { name: 'Gramática' },
+        options: [{ letter: 'A', text: 'A', displayOrder: 0 }],
+      },
+      {
+        id: 'q3',
+        cortexIdNum: 3,
+        statement: 'Lógica 1',
+        subject: { name: 'Raciocínio Lógico' },
+        topic: { name: 'Proposições' },
+        options: [{ letter: 'B', text: 'B', displayOrder: 0 }],
+      },
+    ]);
+
+    const service = new QuestionsService(database, ai);
+    const res = await service.getDiagnosticQuestions('u1', 3);
+
+    expect(database.question.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        annulled: false,
+        outdated: false,
+        attempts: { none: { userId: 'u1' } },
+      }),
+    }));
+    expect(res.questions.map((question) => question.id)).toEqual(['q1', 'q3', 'q2']);
+    expect(res.total).toBe(3);
+  });
+
+  it('getDiagnosticQuestions limita a quantidade solicitada', async () => {
+    database.question.findMany = jest.fn().mockResolvedValue([]);
+    const service = new QuestionsService(database, ai);
+
+    await service.getDiagnosticQuestions('u1', 100);
+
+    expect(database.question.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 60 }),
+    );
+  });
+
   it('submitAnswer calcula isCorrect e persiste attempt', async () => {
     database.question.findUnique.mockResolvedValue({
       id: 'q1',

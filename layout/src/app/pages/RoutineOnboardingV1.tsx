@@ -19,6 +19,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../auth/AuthContext";
+import { StudyDiagnostic } from "../components/onboarding/StudyDiagnostic";
 
 type Day = "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
 type Window = {
@@ -612,6 +613,7 @@ export function RoutineOnboardingV1() {
             <h2 className="mt-1 text-2xl font-semibold">
               Vamos adaptar o plano ao seu ritmo
             </h2>
+            <StudyDiagnostic />
             <div className="mt-6">
               <Label>Qual é seu nível de conhecimento atual?</Label>
               <p className="mt-1 text-sm text-muted-foreground">Não é uma prova: isso apenas define o ponto de partida do seu plano.</p>

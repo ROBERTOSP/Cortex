@@ -35,6 +35,11 @@ export type SubmitAnswerResponse = {
   correct_answer: string;
 };
 
+export type DiagnosticQuestionsResponse = {
+  total: number;
+  questions: NextQuestionResponse[];
+};
+
 @Injectable()
 export class QuestionsService {
   constructor(
@@ -72,6 +77,60 @@ export class QuestionsService {
       alternatives: question.options.map((opt) => ({
         id: opt.letter,
         text: opt.text,
+      })),
+    };
+  }
+
+  async getDiagnosticQuestions(
+    userId: string,
+    requestedLimit = 8,
+  ): Promise<DiagnosticQuestionsResponse> {
+    const limit = Math.min(Math.max(Math.trunc(requestedLimit) || 8, 3), 12);
+    const candidates = await this.database.question.findMany({
+      where: {
+        annulled: false,
+        outdated: false,
+        options: { some: { isCorrect: true } },
+        attempts: { none: { userId } },
+      },
+      orderBy: { cortexIdNum: 'asc' },
+      take: Math.min(limit * 5, 60),
+      include: {
+        subject: { select: { name: true } },
+        topic: { select: { name: true } },
+        options: { orderBy: { displayOrder: 'asc' } },
+      },
+    });
+
+    const bySubject = new Map<string, typeof candidates>();
+    for (const question of candidates) {
+      const key = question.subject?.name || 'Conhecimentos gerais';
+      const bucket = bySubject.get(key) || [];
+      bucket.push(question);
+      bySubject.set(key, bucket);
+    }
+
+    const selected: typeof candidates = [];
+    while (selected.length < limit && bySubject.size) {
+      for (const [subject, bucket] of bySubject) {
+        const question = bucket.shift();
+        if (question) selected.push(question);
+        if (!bucket.length) bySubject.delete(subject);
+        if (selected.length === limit) break;
+      }
+    }
+
+    return {
+      total: selected.length,
+      questions: selected.map((question) => ({
+        id: question.id,
+        subject: question.subject?.name ?? null,
+        topic: question.topic?.name ?? null,
+        statement: question.statement,
+        alternatives: question.options.map((option) => ({
+          id: option.letter,
+          text: option.text,
+        })),
       })),
     };
   }
