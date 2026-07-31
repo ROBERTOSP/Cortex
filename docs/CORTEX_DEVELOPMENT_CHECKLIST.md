@@ -140,6 +140,7 @@ A personalização deve ser construída por comportamento observado — retenç�
 
 ## Fase 8 — Questões de treino e caderno de erros
 
+- [x] Definir que questões exibidas ao aluno serão autorais, geradas como rascunho por IA e publicadas somente após revisão humana.
 - [ ] Criar modelo editorial de questão autoral e revisão.
 - [ ] Criar catálogo-semente pequeno para concursos do beta.
 - [ ] Gerar rascunhos por habilidade, sem reproduzir questão de terceiro.

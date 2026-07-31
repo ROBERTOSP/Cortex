@@ -17,7 +17,7 @@ export class AuthController {
   }
 
   @Post('dev/login')
-  async devLogin(@Req() req, @Body() body: { email?: string; name?: string }) {
+  async devLogin(@Req() req) {
     const enabled = (process.env.DEV_LOGIN_ENABLED || '').trim() === '1';
     const nodeEnv = (process.env.NODE_ENV || '').trim();
     if (!enabled || nodeEnv === 'production') {
@@ -32,11 +32,8 @@ export class AuthController {
       }
     }
 
-    const email =
-      (body?.email || '').trim() ||
-      (process.env.DEV_LOGIN_EMAIL || '').trim() ||
-      'dev@local.cortex';
-    const name = (body?.name || '').trim() || 'Dev User';
+    const email = (process.env.DEV_LOGIN_EMAIL || '').trim() || 'dev@local.cortex';
+    const name = (process.env.DEV_LOGIN_NAME || '').trim() || 'Usuário de teste';
     return this.authService.devLogin({ email, name });
   }
 

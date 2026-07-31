@@ -16,7 +16,7 @@ type AuthState = {
   loginWithGoogleIdToken: (googleToken: string) => Promise<void>;
   registerWithPassword: (payload: { email: string; password: string; name?: string; phone: string; selfDeclaredColor: string; hasDisability: boolean; birthDate: string; sex: string; city: string; availableOtherStates: boolean }) => Promise<void>;
   loginWithPassword: (payload: { email: string; password: string }) => Promise<void>;
-  loginDev: (email?: string) => Promise<void>;
+  loginDev: () => Promise<void>;
   logout: () => void;
   loadFromStorage: () => Promise<void>;
 };
@@ -108,13 +108,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     saveSession(res);
   }, [saveSession]);
 
-  const loginDev = useCallback(async (email?: string) => {
+  const loginDev = useCallback(async () => {
     const secret = (import.meta.env.VITE_DEV_LOGIN_SECRET || "").trim();
     const res = await apiFetch<{ user: AuthUser; token: string }>("/auth/dev/login", {
       method: "POST",
       auth: false,
       headers: secret ? { "X-Dev-Login-Secret": secret } : undefined,
-      body: JSON.stringify({ email: email || undefined }),
+      body: JSON.stringify({}),
     });
 
     try {

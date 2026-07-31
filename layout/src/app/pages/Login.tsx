@@ -59,7 +59,7 @@ export function Login() {
     setIsSubmitting(true);
     setNotice(null);
     try {
-      await loginDev(email || undefined);
+      await loginDev();
       navigate(fromPath, { replace: true });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Não foi possível entrar no ambiente de desenvolvimento.");

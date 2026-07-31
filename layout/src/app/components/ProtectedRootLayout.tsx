@@ -78,7 +78,13 @@ export function ProtectedRootLayout() {
     return null;
   }
 
-  if (user?.role === "ADMIN" && !location.pathname.startsWith("/app/admin/")) {
+  const isAdminRoute = location.pathname.startsWith("/app/admin/");
+
+  if (isAdminRoute && user?.role !== "ADMIN") {
+    return <Navigate to="/app" replace />;
+  }
+
+  if (user?.role === "ADMIN" && !isAdminRoute) {
     return <Navigate to="/app/admin/editais" replace />;
   }
 
@@ -86,7 +92,7 @@ export function ProtectedRootLayout() {
     location.pathname === "/app/onboarding" ||
     location.pathname === "/app/onboarding-v1" ||
     location.pathname.startsWith("/app/edital-review/") ||
-    location.pathname.startsWith("/app/admin/");
+    isAdminRoute;
 
   const onboardingCompleted = legacyOnboardingCompleted || routineOnboardingCompleted;
 

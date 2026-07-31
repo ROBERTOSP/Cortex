@@ -6,6 +6,7 @@ describe('AuthService', () => {
   const database: any = {
     user: {
       findUnique: jest.fn(),
+      upsert: jest.fn(),
     },
   };
 
@@ -35,5 +36,32 @@ describe('AuthService', () => {
         password: 'senha-incorreta',
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('login de desenvolvimento cria ou restaura somente um usuário comum', async () => {
+    database.user.upsert.mockResolvedValue({
+      id: 'dev-user',
+      email: 'dev@local.cortex',
+      name: 'Usuário de teste',
+      avatarUrl: null,
+      role: 'USER',
+    });
+    const service = new AuthService(jwt, database);
+
+    const result = await service.devLogin({
+      email: 'dev@local.cortex',
+      name: 'Usuário de teste',
+    });
+
+    expect(database.user.upsert).toHaveBeenCalledWith({
+      where: { email: 'dev@local.cortex' },
+      update: { name: 'Usuário de teste', role: 'USER' },
+      create: {
+        email: 'dev@local.cortex',
+        name: 'Usuário de teste',
+        role: 'USER',
+      },
+    });
+    expect(result.user.role).toBe('USER');
   });
 });

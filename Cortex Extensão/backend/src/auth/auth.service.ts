@@ -32,10 +32,12 @@ export class AuthService {
       where: { email },
       update: {
         name: payload.name ?? undefined,
+        role: 'USER',
       },
       create: {
         email,
         name: payload.name ?? undefined,
+        role: 'USER',
       },
     });
 
