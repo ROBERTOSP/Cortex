@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
 import { JwtService } from '@nestjs/jwt';
@@ -135,10 +140,20 @@ export class AuthService {
   async loginWithPassword(payload: { email?: string; password?: string }) {
     const email = this.normalizeEmail(payload?.email);
     this.assertPassword(payload?.password);
-    const user = await this.database.user.findUnique({
-      where: { email },
-      select: { id: true, email: true, name: true, avatarUrl: true, role: true, passwordHash: true },
-    });
+    let user;
+    try {
+      user = await this.database.user.findUnique({
+        where: { email },
+        select: { id: true, email: true, name: true, avatarUrl: true, role: true, passwordHash: true },
+      });
+    } catch (error) {
+      if ((error as { code?: string })?.code === 'P1001') {
+        throw new ServiceUnavailableException(
+          'O serviço de acesso está temporariamente indisponível. Tente novamente em instantes.',
+        );
+      }
+      throw error;
+    }
     if (!user?.passwordHash || !(await this.verifyPassword(payload.password, user.passwordHash))) {
       throw new UnauthorizedException('E-mail ou senha incorretos.');
     }
